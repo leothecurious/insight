@@ -166,6 +166,8 @@ def test_motion_runs_are_named_apart_from_the_lewm_arms():
         motion = compose_train("lewm_motion", f"+arm={arm}", "seed=1")
         assert lewm.output_model_name == lewm.subdir == f"{arm}_seed1"
         assert motion.output_model_name == motion.subdir == f"motion_{arm}_seed1"
+    assert compose_train("lewm").output_model_name == "lewm"
+    assert compose_train("lewm_motion").output_model_name == compose_train("lewm_motion").subdir == "motion_lewm"
 
 
 def test_diff_branch_is_built_as_in_the_reference_config():
