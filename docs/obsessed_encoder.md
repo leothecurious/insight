@@ -79,12 +79,17 @@ Effective rank is on clean frames.
 | `tag_frame` | 1 | 94% | 0.01 | 1.00 | 4.3 / 4.3 | 121 |
 | `tag_frame` | 2 | 92% | 0.00 | 1.00 | 4.5 / 4.5 | 122 |
 
-Both arms reproduce in all three seeds. The per-episode square costs LeWM 63 to 85
-points of signal error over the per-frame square, against a gap of 0.003 between
-the two clean seeds, and its planning stays at 1 or 2 of 50 starts. The per-frame
-square matches the clean baseline. In `tag_episode` the pair cosines swap at about
-step 600 (seed 0: same-tag 0.25, same-content 0.71 at step 600; 0.78 and 0.19 by
-step 1400), later than the first-measurement swap Enigma reports. Seed 0 plans from
+The per-episode square costs LeWM 63 to 85 points of signal error over the
+per-frame square in every seed, against a gap of 0.003 between the two clean
+seeds, and its planning stays at 1 or 2 of 50 starts. The per-frame square
+matches the clean baseline. Same-tag exceeds same-content for the per-episode
+square in every seed, but seed 1 ends at same-content 0.2005, just outside the
+±0.2 band above. In `tag_episode` the pair cosines cross between steps 600 and
+900 (seed 0: same-tag 0.25 and same-content 0.71 at step 600, same-tag first
+above 0.5 at step 900, 0.78 and 0.19 by step 1400; seed 1: same-tag first above
+0.5 at step 700), later than the first-measurement swap Enigma reports. The step
+checkpoints are every 5000 steps, where Enigma saves every 500 and plans every
+2000, so planning before step 5000 is not scored here. Seed 0 plans from
 2%, 6% and 10% of starts at steps 5k, 15k and 25k. On clean frames the per-episode
 models collapse to four to six dimensions with 94% to 99% of the variance in the
 top two, so without its colour the embedding keeps little of the scene. Unlike
