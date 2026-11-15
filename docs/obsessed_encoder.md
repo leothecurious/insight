@@ -62,7 +62,7 @@ the main latent. The difference branch is 8-dimensional on 112-pixel difference 
 as in their benchmark config.
 
 Their benchmark trains at batch size 64. Here the batch size stays at LeWM's 128, so the
-two models are compared under one training setup. Add `loader.batch_size=64` to match theirs.
+two models are compared under one training setup. Add `loader.batch_size=64` to match theirs. Their learning-rate warmup is 0.5% of the training steps and ours is 1%, so batch 64 alone gives twice their warmup steps; at batch 128 the two warmups have the same number of steps.
 
 Their "ours" runs also train a pixel decoder and pose probes on detached latents. These add
 no encoder gradient and are left out, but they count toward the global gradient-norm clip
