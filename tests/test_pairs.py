@@ -103,3 +103,16 @@ def test_t_position_separates_destination_readers_from_block_readers():
     assert block_pair["same_content"] > 0.99
     assert abs(block_pair["same_tag"]) < 0.2
     assert abs(dest_pair["baseline"]) < 0.2 and abs(block_pair["baseline"]) < 0.2
+
+
+def test_colour_probe_reads_the_corner_and_sits_at_chance_without_it():
+    # 192 features, the width of the latent, so that OLS overfits the 320 train frames
+    masked_reader = Reader(lambda x: F.avg_pool2d(x[:, :, 8:, 8:], 3).flatten(1))
+    kinds = ("linear", "ridge")
+    args = (frames(), PixelTag("episode", 5, 0), SIZE, kinds)
+    on_corner = pairs.measure_colour(tag_reader, *args)["backbone"]
+    masked = pairs.measure_colour(masked_reader, *args)["backbone"]
+
+    assert on_corner["ridge"]["eps"] < 5
+    assert abs(masked["ridge"]["eps"] - 100) < 10
+    assert masked["linear"]["eps"] > masked["ridge"]["eps"]
