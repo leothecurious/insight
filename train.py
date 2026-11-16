@@ -141,6 +141,7 @@ def run(cfg):
 
     object_dump_callback = SaveCkptCallback(
         run_name=cfg.output_model_name, cfg=cfg.model, epoch_interval=1,
+        step_interval=cfg.checkpoint.every_n_steps,
     )
 
     ckpt_path = run_dir / f"{cfg.output_model_name}_weights.ckpt"
