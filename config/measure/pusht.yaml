@@ -45,8 +45,11 @@ metrics:
 pred_copy:
   batch_size: 512
 
-# frames stamped with the tag's colours (data.tag.size, data.tag.seed); delete to skip
+# colour: dataset frames stamped with the tag's colours (data.tag.size, data.tag.seed)
+# t_position: fresh renders, tag = the destination outline pose, one fixed colour
+# delete the block to skip
 pairs:
+  suite: colour # colour | t_position
   n: 256
 
 # colour probe on frames stamped with the tag's colours; delete to skip
