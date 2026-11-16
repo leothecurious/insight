@@ -47,7 +47,7 @@ pairs:
 
 # colour probe on frames stamped with the tag's colours; delete to skip
 colour:
-  n: 1024
+  n: 4096
   kinds: [ridge, mlp]
   train_fraction: 0.8
 
