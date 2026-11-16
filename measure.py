@@ -7,7 +7,7 @@ import stable_worldmodel as swm
 import torch
 from omegaconf import DictConfig, OmegaConf
 
-from metrics import data, pairs, suite
+from metrics import data, pairs, predictor, suite
 from metrics.latents import Latents, extract
 from tag import PixelTag, resolve_seed
 
@@ -63,6 +63,8 @@ def run(cfg: DictConfig):
     metrics = suite.run(lat, OmegaConf.to_container(cfg.metrics, resolve=True))
     if cfg.get("pairs"):
         metrics["pairs"] = measure_pairs(cfg, model)
+    if cfg.get("pred_copy"):
+        metrics["pred_copy"] = predictor.measure(model, lat, **cfg.pred_copy)
     end_time = time.time()
 
     print(json.dumps(metrics, indent=1))
