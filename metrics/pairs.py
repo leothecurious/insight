@@ -24,6 +24,7 @@ import stable_worldmodel as swm
 import torch
 import torch.nn.functional as F
 
+from metrics import stimuli
 from utils import get_img_preprocessor
 
 REPS = ("backbone", "projection")
@@ -108,6 +109,30 @@ def measure(model, frames, tag, img_size, seed=0):
     partner = cyclic_derangement(n, np.random.default_rng(seed))
     own = encode(model, stamp(frames, colors, tag.size), img_size)
     swap = encode(model, stamp(frames, colors[partner], tag.size), img_size)
+    return {rep: pair_cosines(own[rep], swap[rep], partner) for rep in REPS}
+
+
+def measure_t_position(model, n, tag, img_size, seed=0, renderer=None):
+    """Pair cosines with the destination outline as the tag and the block pose as the content.
+
+    The t_position suite of Enigma-Incorporated/The-Obsessed-Encoder@37819425
+    (``callbacks/pair_analysis.py``). ``n`` fresh renders carry a block pose and a
+    destination pose; the ``swap`` pass gives each scene its partner's destination.
+    Every frame carries the colour ``tag.color(0)`` in the corner, so the colour is
+    held fixed across the suite.
+    """
+    renderer = renderer or stimuli.StimulusRenderer()
+    rng = np.random.default_rng(seed)
+    orig, dest = stimuli.sample_orig(rng, n), stimuli.sample_dest(rng, n)
+    partner = cyclic_derangement(n, rng)
+    colors = tag.color(0)[None].expand(n, 3)
+
+    def encode_scenes(dests):
+        frames = np.stack([renderer.render(orig[j], dests[j]) for j in range(n)])
+        frames = torch.from_numpy(frames).permute(0, 3, 1, 2).contiguous()
+        return encode(model, stamp(frames, colors, tag.size), img_size)
+
+    own, swap = encode_scenes(dest), encode_scenes(dest[partner])
     return {rep: pair_cosines(own[rep], swap[rep], partner) for rep in REPS}
 
 

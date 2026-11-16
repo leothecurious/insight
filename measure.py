@@ -13,7 +13,10 @@ from tag import PixelTag, resolve_seed
 
 
 def measure_pairs(cfg, model):
-    """Pair cosines on dataset frames stamped with the tag's colours."""
+    """Pair cosines of the ``pairs.suite``: the tag's colours on dataset frames, or t_position."""
+    if cfg.pairs.suite == "t_position":
+        tag = PixelTag("episode", cfg.data.tag.size, cfg.data.tag.seed)
+        return pairs.measure_t_position(model, cfg.pairs.n, tag, cfg.data.img_size)
     frames = pairs.load_frames(cfg.data.name, cfg.pairs.n, cfg.data.seed, cfg.get("cache_dir"))
     tag = PixelTag("episode", cfg.data.tag.size, cfg.data.tag.seed)
     return pairs.measure(model, frames, tag, cfg.data.img_size, cfg.data.seed)

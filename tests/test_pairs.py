@@ -74,3 +74,32 @@ def test_pair_cosines_separate_tag_readers_from_scene_readers():
     assert scene_pair["same_content"] > 0.99
     assert abs(scene_pair["same_tag"]) < 0.2
     assert abs(tag_pair["baseline"]) < 0.2 and abs(scene_pair["baseline"]) < 0.2
+
+
+class Scenes:
+    """Renders a frame with the destination in one patch and the block pose in another."""
+
+    def render(self, state, dest_pose):
+        frame = np.zeros((SIZE, SIZE, 3), dtype=np.uint8)
+        frame[8:16, 8:16] = (np.asarray(dest_pose) / [372, 372, 2 * np.pi] * 255).astype(np.uint8)
+        frame[20:28, 8:16] = (np.asarray(state)[2:5] / [372, 372, 2 * np.pi] * 255).astype(np.uint8)
+        return frame
+
+
+dest_reader = Reader(lambda x: x[:, :, 8:16, 8:16].mean((2, 3)))
+block_reader = Reader(lambda x: x[:, :, 20:28, 8:16].mean((2, 3)))
+
+
+def measure_t_position(model):
+    return pairs.measure_t_position(model, N, PixelTag("episode", 5, 0), SIZE, renderer=Scenes())
+
+
+def test_t_position_separates_destination_readers_from_block_readers():
+    dest_pair = measure_t_position(dest_reader)["backbone"]
+    block_pair = measure_t_position(block_reader)["backbone"]
+
+    assert dest_pair["same_tag"] > 0.99
+    assert abs(dest_pair["same_content"]) < 0.2
+    assert block_pair["same_content"] > 0.99
+    assert abs(block_pair["same_tag"]) < 0.2
+    assert abs(dest_pair["baseline"]) < 0.2 and abs(block_pair["baseline"]) < 0.2
