@@ -44,7 +44,7 @@ effective rank. The pair cosines always stamp a tag, whatever `data.tag.mode` is
 Planning over training time uses the step checkpoints:
 
 ```bash
-for N in 5000 10000 20000 50000; do
+for N in 5000 10000 25000 50000 120000; do
   python eval.py --config-name=pusht policy=${ARM}_seed${S}/weights_step_$N.pt tag.mode=$MODE
 done
 ```
@@ -79,23 +79,21 @@ Effective rank is on clean frames.
 | `tag_frame` | 1 | 94% | 0.01 | 1.00 | 4.3 / 4.3 | 121 |
 | `tag_frame` | 2 | 92% | 0.00 | 1.00 | 4.5 / 4.5 | 122 |
 
-The per-episode square costs LeWM 63 to 85 points of signal error over the
+The per-episode square costs LeWM 62.9 to 84.5 points of signal error over the
 per-frame square in every seed, against a gap of 0.003 between the two clean
 seeds, and its planning stays at 1 or 2 of 50 starts. The per-frame square
 matches the clean baseline. Same-tag exceeds same-content for the per-episode
 square in every seed, but seed 1 ends at same-content 0.2005, just outside the
 ±0.2 band above. On clean frames the per-episode models collapse to four to six
-dimensions with 94% to 99% of the variance in the top two, so without its colour
-the embedding keeps little of the scene.
+dimensions.
 
 Seed 0 and the baselines were scored at `28a4554`, seeds 1 and 2 at `73d9c1e`,
 which reads each run's own tag seed.
 
 ## Chance floor
 
-A random-action policy succeeds on 0, 0 and 2% of the 50 starts with the tag off,
-per-episode and per-frame. The per-episode models' 1 or 2 successes of 50 at
-epoch 10 sit at this floor.
+A random-action policy succeeds on 0 to 2% of the 50 starts, so the per-episode
+models' 1 or 2 successes of 50 at epoch 10 sit at this floor.
 
 ## Planning over training
 
@@ -111,15 +109,14 @@ One start is 2 points. The checkpoints are every 5000 steps where Enigma saves e
 | 50k | 6, 4, 2 | 94, 94, 88 |
 | 120k | 2, 4, 4 | 94, 94, 98 |
 
-The per-frame arm is at 78 to 88% by step 25k. The per-episode arm peaks at 6, 12
-and 14% in seeds 1, 0 and 2, between steps 10k and 60k, and from step 80k it is
-back at 0 to 6%, close to the floor.
+The per-frame arm is at 78 to 88% by step 25k. Over all saved steps the per-episode
+arm peaks at 14% or less, between steps 10k and 60k, and from step 80k it is back
+at 0 to 6%, close to the floor.
 
 ## Epoch 5 readout
 
-Weights at epoch 5 (step 69,664), scored at `73d9c1e` on the arm's own frames.
-Effective rank is also on those frames, where the epoch-10 per-episode models have
-115, 69 and 86.
+Weights at epoch 5 (step 69,664), scored at `73d9c1e` on the arm's own frames,
+effective rank included.
 
 | Run | Seed | Planning | same-tag | same-content | Signal error | Effective rank |
 |---|---|---|---|---|---|---|
@@ -130,37 +127,26 @@ Effective rank is also on those frames, where the epoch-10 per-episode models ha
 | `tag_frame` | 1 | 92% | 0.01 | 1.00 | 4.4 | 115 |
 | `tag_frame` | 2 | 92% | 0.00 | 1.00 | 4.7 | 116 |
 
-The per-episode models already plan at the floor, with signal error 64 to 84
-against 67 to 89 at epoch 10. The per-frame models plan 88 to 92% against 92 to 96%.
+The per-episode models already plan at the floor, with signal error 63.5 to 83.7
+against 67.2 to 88.8 at epoch 10. The per-frame models plan 88 to 92% against 92 to 96%.
 
 ## Swap timing
 
-In `tag_episode` the pair cosines cross between steps 600 and 900. In seed 0
-same-tag is 0.25 and same-content 0.71 at step 600, same-tag is first above 0.5 at
-step 900, and the two are 0.78 and 0.19 by step 1400. In seed 1 same-tag is first
-above 0.5 at step 700. Enigma reports the swap at its first measurement.
-
-A fresh seed-0 run stopped at step 1000 and scored every 100 steps with Enigma's
-pair code gives same-tag 0.25, 0.52 and 0.85 at steps 600, 700 and 900. The
-measurement therefore does not explain the later swap. During the swap the
-dataset-frame reading lags Enigma's code by 0.11 to 0.18 in same-tag (0.67 against
-0.85 at step 900), and at steps 700 and 800 it still has same-tag below
-same-content where Enigma's code has it above. With the learning-rate schedule
-shortened to 1000 steps (`+trainer.max_steps=1000`), same-tag passes 0.5
-between steps 200 and 300 (0.46 then 0.75 with Enigma's code, 0.46 then 0.64 on
-dataset frames), so the swap follows the schedule. Whether Enigma's step axis
-matches ours is open.
+In `tag_episode` same-tag first passes 0.5 at step 900 in seed 0 and step 700 in
+seed 1, where Enigma reports the swap at its first measurement. Enigma's pair code
+on a fresh seed-0 run puts it between steps 600 and 700, so the measurement does
+not explain the later swap. With the learning-rate schedule shortened to 1000
+steps (`+trainer.max_steps=1000`) it moves to between steps 200 and 300, so the
+swap follows the schedule. Whether Enigma's step axis matches ours is open.
 
 ## Prediction loss
 
-Enigma's figure 8 plots the training-split `fit/pred_loss`, smoothed over 25
-logged points (about 1250 steps) on a log axis. On that series the per-episode
+On the smoothed training `fit/pred_loss` of Enigma's figure 8, the per-episode
 loss is below the per-frame loss early in training in every seed (mean 0.0087
 against 0.019 at step 25k). From step 61k seeds 1 and 2 stay above it and end at
 0.019 and 0.030 against 0.007, while seed 0 ends below at 0.0066. The epoch-end
-validation loss is a separate series and ends above the per-frame loss in every seed
-(0.006 to 0.026 against 0.003 to 0.004). Enigma's plotting comments mention late
-spikes in the per-episode arm.
+validation loss ends above the per-frame loss in every seed (0.006 to 0.026
+against 0.003 to 0.004).
 
 ## Where the pair frames come from
 
