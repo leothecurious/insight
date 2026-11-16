@@ -45,5 +45,11 @@ metrics:
 pairs:
   n: 256
 
+# colour probe on frames stamped with the tag's colours; delete to skip
+colour:
+  n: 1024
+  kinds: [ridge, mlp]
+  train_fraction: 0.8
+
 output:
   filename: pusht_metrics.txt
