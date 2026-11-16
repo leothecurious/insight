@@ -26,7 +26,7 @@ The baseline's pair cosines are measured by stamping a tag the encoder never saw
 Training, with `S` the seed and `ARM` one of `baseline`, `tag_episode`, `tag_frame`:
 
 ```bash
-python train.py data=pusht +arm=$ARM seed=$S
+uv run train.py data=pusht +arm=$ARM seed=$S
 ```
 
 The run is saved as `${ARM}_seed${S}`. Measurement and planning read the tag
@@ -35,8 +35,8 @@ arm's own mode to score on the frames it trained on, or `off` for clean frames.
 
 ```bash
 RUN=${ARM}_seed${S}/weights_epoch_10.pt
-python measure.py --config-name=pusht policy=$RUN data.tag.mode=$MODE
-python eval.py --config-name=pusht policy=$RUN tag.mode=$MODE
+uv run measure.py --config-name=pusht policy=$RUN data.tag.mode=$MODE
+uv run eval.py --config-name=pusht policy=$RUN tag.mode=$MODE
 ```
 
 `measure.py` reports the pair cosines (`pairs`), the state probes and the
@@ -45,7 +45,7 @@ Planning over training time uses the step checkpoints:
 
 ```bash
 for N in 5000 10000 25000 50000 120000; do
-  python eval.py --config-name=pusht policy=${ARM}_seed${S}/weights_step_$N.pt tag.mode=$MODE
+  uv run eval.py --config-name=pusht policy=${ARM}_seed${S}/weights_step_$N.pt tag.mode=$MODE
 done
 ```
 
