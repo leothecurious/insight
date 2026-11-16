@@ -170,10 +170,10 @@ the corner square is elsewhere. No tag is stamped. Pair cosines use the
 the content the block pose, and one fixed corner colour (the tag seed's colour 0).
 
 ```bash
-python train.py data=pusht +arm=randgoal seed=$S
+uv run train.py data=pusht +arm=randgoal seed=$S
 RUN=randgoal_seed${S}/weights_epoch_10.pt
-python measure.py --config-name=pusht policy=$RUN pairs.suite=t_position
-python eval.py --config-name=pusht policy=$RUN eval.dataset_name=pusht_scripted_goal_train.lance
+uv run measure.py --config-name=pusht policy=$RUN pairs.suite=t_position
+uv run eval.py --config-name=pusht policy=$RUN eval.dataset_name=pusht_scripted_goal_train.lance
 ```
 
 On a dataset with a `goal_pose` column, `eval.py` draws each environment's destination
