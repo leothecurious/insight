@@ -71,7 +71,7 @@ of 1.0 in their runs.
 The arms work as they are, and the run is saved as `motion_${ARM}_seed${S}`.
 
 ```bash
-python train.py --config-name=lewm_motion data=pusht +arm=$ARM seed=$S
+uv run train.py --config-name=lewm_motion data=pusht +arm=$ARM seed=$S
 ```
 
 Measurement and planning take `policy=motion_${ARM}_seed${S}/weights_epoch_10.pt` as above.
