@@ -6,8 +6,6 @@
 
 `insight` is for exploring loss formulations that bridge latent (JEPA) and pixel-level world modelling, and for measuring what each one does to the learned representation: what it encodes, how stably it trains, how much data it needs and how it holds up under nuisance. Objectives, architectures and datasets are swappable config groups over one data pipeline, training loop, metric suite and planner, so any two runs differ only in what you changed.
 
-First on the list: objectives from latent-only LeWM to pixel twins and grounded hybrids, architectures such as MotionJEPA and H-JEPA, and fast toy datasets (a moving dot, PushT with nuisance tags) next to the LeWM benchmarks.
-
 It is a thin research layer over three libraries:
 
 | Library | Provides |
@@ -43,10 +41,6 @@ configs/     one config root for every script
 tests/       regression tests for silent failures
 licenses/    licenses of ported code
 ```
-
-## Contributing
-
-Branch from `dev` as `feature/…`, `fix/…` or `refactor/…` and open the PR against `dev`; `main` and `dev` change only through reviewed PRs. New objectives, models and datasets plug into the existing config groups rather than adding their own scripts, and a PR names any place it departs from how the underlying libraries are meant to be used.
 
 ## License
 
