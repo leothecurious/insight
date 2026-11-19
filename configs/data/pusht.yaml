@@ -16,6 +16,8 @@ frames:
     block: {leaf: current.body.block.position, column: state, columns: [2, 4]}
     angle: {leaf: current.body.block.angle, column: state, columns: [4, 5]}
   zero: [current.render_segments, current.render_segment_count]
+# State columns the online probe decodes from every frame's embedding during training.
+probe: {column: state, columns: [0, 5]}
 # How planning binds to this dataset (insight.planning.task.Task): the State leaf that holds the
 # observation, the observation columns that are proprioception, and reset option <- dataset column.
 # A column named goal_X is X at the goal step.

@@ -55,6 +55,13 @@ optimizer:
 checkpoint:
   epochs: [5, 10]
 
+# spt's training-time monitors: RankMe of the embeddings at each validation, and a linear probe of
+# data.probe trained on detached embeddings.
+monitor:
+  enabled: true
+  queue_length: 4096
+  probe_optimizer: {type: AdamW, lr: 1e-3}
+
 # Opened before any work starts; the keys are WandbLogger arguments.
 wandb:
   enabled: false

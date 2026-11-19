@@ -12,6 +12,7 @@ import lightning as pl
 import stable_pretraining as spt
 import stable_worldmodel as swm
 import torch
+import torchmetrics
 from lightning.pytorch.loggers import WandbLogger
 from omegaconf import OmegaConf, open_dict
 from stable_worldmodel.wm.loss import SIGReg
@@ -102,17 +103,42 @@ def run(cfg):
     if cfg.wandb.enabled:
         wandb_logger.log_hyperparams(OmegaConf.to_container(cfg, resolve=True))
 
+    callbacks = [
+        SaveWeights(
+            cfg.run,
+            {"model": cfg.model, **cfg.loss.modules},
+            cfg.checkpoint.epochs,
+            cache_dir=cfg.paths.runs,
+        ),
+        RNGStateCallback(train),
+    ]
+    if cfg.monitor.enabled:
+        callbacks.append(
+            spt.callbacks.RankMe(
+                name="rankme",
+                target="embedding",
+                queue_length=cfg.monitor.queue_length,
+                target_shape=cfg.embed_dim,
+            )
+        )
+        if cfg.data.get("probe"):
+            start, stop = cfg.data.probe.columns
+            callbacks.append(
+                spt.callbacks.OnlineProbe(
+                    world_model,
+                    name="state_probe",
+                    input="embedding",
+                    target="probe_target",
+                    probe=torch.nn.Linear(cfg.embed_dim, stop - start),
+                    loss=torch.nn.MSELoss(),
+                    optimizer=dict(cfg.monitor.probe_optimizer),
+                    metrics={"r2": torchmetrics.R2Score()},
+                )
+            )
+
     trainer = pl.Trainer(
         **cfg.trainer,
-        callbacks=[
-            SaveWeights(
-                cfg.run,
-                {"model": cfg.model, **cfg.loss.modules},
-                cfg.checkpoint.epochs,
-                cache_dir=cfg.paths.runs,
-            ),
-            RNGStateCallback(train),
-        ],
+        callbacks=callbacks,
         num_sanity_val_steps=1,
         logger=loggers,
         enable_checkpointing=False,

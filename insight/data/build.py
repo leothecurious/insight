@@ -14,6 +14,23 @@ from stable_pretraining.data import dataset_stats, gpu_transforms, transforms
 from insight.data.frames import Frames
 
 
+class ProbeTarget(torch.nn.Module):
+    """Set ``batch["probe_target"]`` to the probe columns of every frame, ``(B * T, k)``, standardised
+    with training statistics so the online probe's loss weighs each column alike."""
+
+    def __init__(self, column, start, stop, rows):
+        super().__init__()
+        self.column, self.start, self.stop = column, start, stop
+        rows = torch.as_tensor(np.asarray(rows)[:, start:stop], dtype=torch.float32)
+        self.register_buffer("mean", rows.mean(0))
+        self.register_buffer("std", rows.std(0))
+
+    def forward(self, batch):
+        x = batch[self.column][..., self.start : self.stop].flatten(0, 1).float()
+        batch["probe_target"] = (x - self.mean.to(x.device)) / self.std.to(x.device)
+        return batch
+
+
 def split_episodes(dataset, val_fraction, seed):
     """Split clips by episode. Returns two ``Subset``s and the mask of training episodes."""
     episodes = np.array([ep for ep, _ in dataset.clip_indices])
@@ -70,13 +87,15 @@ def build(cfg, seed):
         for column, scaler in fit_scalers(cfg, dataset, mask).items()
     ]
     transform = transforms.Compose(*normalizers)
-    gpu_transform = spt.data.GPUCompose(
-        [
-            Frames(cfg["frames"]),
-            gpu_transforms.GPUNormalize(**dataset_stats.ImageNet, source="pixels", target="pixels"),
-        ],
-        compile=False,
-    )
+    steps = [
+        Frames(cfg["frames"]),
+        gpu_transforms.GPUNormalize(**dataset_stats.ImageNet, source="pixels", target="pixels"),
+    ]
+    if cfg.get("probe"):
+        column, (start, stop) = cfg["probe"]["column"], cfg["probe"]["columns"]
+        rows = dataset.get_col_data(column)[np.repeat(mask, dataset.lengths)]
+        steps.append(ProbeTarget(column, start, stop, rows))
+    gpu_transform = spt.data.GPUCompose(steps, compile=False)
     for ds in datasets:
         ds.transform = transform
         ds.gpu_transform = gpu_transform

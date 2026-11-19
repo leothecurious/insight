@@ -15,6 +15,8 @@ def lewm(self, batch, stage, *, history_size, num_preds, sigreg_weight):
     output["pred_loss"] = (pred_emb - emb[:, num_preds:]).pow(2).mean()
     output["sigreg_loss"] = self.sigreg(emb.transpose(0, 1))
     output["loss"] = output["pred_loss"] + sigreg_weight * output["sigreg_loss"]
+    # Every frame's embedding, (B * T, D), for the training-time monitors.
+    output["embedding"] = emb.flatten(0, 1)
 
     self.log_dict(
         {f"{stage}/{k}": v.detach() for k, v in output.items() if "loss" in k},
