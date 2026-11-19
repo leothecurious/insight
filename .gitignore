@@ -9,3 +9,5 @@ multirun/
 wandb/
 runs/
 configs/local/local.yaml
+AGENTS.md
+CLAUDE.md

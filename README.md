@@ -46,7 +46,7 @@ licenses/    licenses of ported code
 
 ## Contributing
 
-Read [AGENTS.md](AGENTS.md) first: it holds the design rules (reuse the libraries' canonical usage, one pipeline, one change per experiment arm) and the branch and commit conventions. Branch from `dev`, open PRs against `dev`, and name any deviation from library usage in the PR.
+Branch from `dev` as `feature/…`, `fix/…` or `refactor/…` and open the PR against `dev`; `main` and `dev` change only through reviewed PRs. New objectives, models and datasets plug into the existing config groups rather than adding their own scripts, and a PR names any place it departs from how the underlying libraries are meant to be used.
 
 ## License
 
