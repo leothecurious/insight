@@ -1,0 +1,13 @@
+defaults:
+  - pusht
+  - _self_
+
+dataset:
+  name: pusht_scripted_goal_train.lance
+  keys_to_load: [action, state, goal_pose]
+  keys_to_cache: [action, state, goal_pose]
+ids: null
+frames:
+  leaves:
+    goal_xy: {leaf: owned.variation.goal.position.current.value, column: goal_pose, columns: [0, 2]}
+    goal_angle: {leaf: owned.variation.goal.angle.current.value, column: goal_pose, columns: [2, 3]}

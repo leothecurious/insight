@@ -1,0 +1,9 @@
+defaults:
+  - _self_
+  - data: pusht
+
+seed: 3072
+img_size: 224
+wm:
+  history_size: 3
+  num_preds: 1

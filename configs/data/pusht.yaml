@@ -1,0 +1,18 @@
+dataset:
+  name: pusht_expert_train.h5
+  frameskip: 5
+  num_steps: ${eval:'${wm.history_size} + ${wm.num_preds}'}
+  keys_to_load: [action, state, episode_idx, step_idx]
+  keys_to_cache: [action, state, episode_idx, step_idx]
+ids: {episode: episode_idx, step: step_idx}
+normalize: [action]
+split: {val_fraction: 0.1}    # or val: {name: <file>} for a separate validation set
+frames:
+  env: PushT
+  kwargs: {}
+  size: ${img_size}
+  leaves:
+    agent: {leaf: current.body.agent.position, column: state, columns: [0, 2]}
+    block: {leaf: current.body.block.position, column: state, columns: [2, 4]}
+    angle: {leaf: current.body.block.angle, column: state, columns: [4, 5]}
+  zero: [current.render_segments, current.render_segment_count]
