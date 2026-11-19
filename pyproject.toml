@@ -1,0 +1,38 @@
+[build-system]
+requires = ["setuptools>=77"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "insight"
+version = "0.1.0"
+description = "World-model objectives between latent and pixel prediction, built on stable-worldmodel, stable-envs and stable-pretraining"
+readme = "README.md"
+license = "MIT"
+license-files = ["LICENSE"]
+requires-python = "==3.10.*"
+dependencies = [
+    "stable-worldmodel[train,format]",
+    "stable-envs[pusht,navigation]",
+    "stable-pretraining==0.1.8",
+    "torch==2.11.0",
+    "torchvision==0.26.0",
+    "scikit-learn>=1.7",
+]
+
+[dependency-groups]
+dev = ["pytest>=8", "ruff>=0.8"]
+
+[tool.setuptools.packages.find]
+include = ["insight*"]
+
+[tool.uv.sources]
+# Exact commits: State field paths and the LeWM module change between releases.
+stable-worldmodel = { git = "https://github.com/galilai-group/stable-worldmodel", rev = "21446f1ede6d5284e981bd7b47f432b994e6d812" }
+stable-envs = { git = "https://github.com/galilai-group/stable-envs", rev = "e2715139fd5e581f57f20cd0d2393b539351d37d" }
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py310"
