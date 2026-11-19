@@ -1,7 +1,11 @@
 .venv/
 __pycache__/
 *.pyc
+*.egg-info/
+.pytest_cache/
+.ruff_cache/
 outputs/
 multirun/
 wandb/
-config/paths/local.yaml
+runs/
+configs/local/local.yaml

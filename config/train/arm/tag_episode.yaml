@@ -1,8 +1,0 @@
-# @package _global_
-# Obsessed-encoder test arm: one corner colour per episode, predictable within a clip.
-defaults:
-  - baseline
-  - _self_
-output_model_name: ${oc.select:run_prefix,''}tag_episode_seed${seed}
-tag:
-  mode: episode

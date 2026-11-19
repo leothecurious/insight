@@ -1,188 +1,51 @@
+<h1 align="center">insight</h1>
 
-# LeWorldModel
-### Stable End-to-End Joint-Embedding Predictive Architecture from Pixels
+<p align="center"><i>Probing the failure modes of JEPA world models: objectives, architectures and toy datasets on one pipeline.</i></p>
 
-[Lucas Maes*](https://x.com/lucasmaes_), [Quentin Le Lidec*](https://quentinll.github.io/), [Damien Scieur](https://scholar.google.com/citations?user=hNscQzgAAAAJ&hl=fr), [Yann LeCun](https://yann.lecun.com/) and [Randall Balestriero](https://randallbalestriero.github.io/)
+---
 
-**Abstract:** Joint Embedding Predictive Architectures (JEPAs) offer a compelling framework for learning world models in compact latent spaces, yet existing methods remain fragile, relying on complex multi-term losses, exponential moving averages, pretrained encoders, or auxiliary supervision to avoid representation collapse. In this work, we introduce LeWorldModel (LeWM), the first JEPA that trains stably end-to-end from raw pixels using only two loss terms: a next-embedding prediction loss and a regularizer enforcing Gaussian-distributed latent embeddings. This reduces tunable loss hyperparameters from six to one compared to the only existing end-to-end alternative. With ~15M parameters trainable on a single GPU in a few hours, LeWM plans up to 48× faster than foundation-model-based world models while remaining competitive across diverse 2D and 3D control tasks. Beyond control, we show that LeWM's latent space encodes meaningful physical structure through probing of physical quantities. Surprise evaluation confirms that the model reliably detects physically implausible events.
+`insight` studies when joint-embedding predictive world models learn the wrong thing: nuisance features, memorised trajectories, collapsed dynamics. It compares objectives (LeWM, pixel twins, grounded hybrids), architectures (MotionJEPA, H-JEPA) and fast toy datasets (moving dot, PushT with nuisance tags) under one data pipeline, training loop, metric suite and planner.
 
-<p align="center">
-   <b>[ <a href="https://arxiv.org/pdf/2603.19312v1">Paper</a> | <a href="https://huggingface.co/collections/quentinll/lewm">Checkpoints &amp; Data</a> | <a href="https://le-wm.github.io/">Website</a> ]</b>
-</p>
+It is a thin research layer over three libraries:
 
-<br>
+| Library | Provides |
+|---|---|
+| [stable-envs](https://github.com/galilai-group/stable-envs) | batched simulators with explicit state; `render(state)` on the GPU |
+| [stable-worldmodel](https://github.com/galilai-group/stable-worldmodel) | dataset format and loading, LeWM + SIGReg, checkpoints, planning |
+| [stable-pretraining](https://github.com/galilai-group/stable-pretraining) | training loop, GPU transforms, monitoring callbacks |
 
-<p align="center">
-  <img src="assets/lewm.gif" width="80%">
-</p>
+No dataset stores pixels. Each is recorded state rows plus a *frame spec*, and frames are drawn on the training GPU, so training, measurement and planning see the same images by construction.
 
-If you find this code useful, please reference it in your paper:
-```
-@article{maes_lelidec2026lewm,
-  title={LeWorldModel: Stable End-to-End Joint-Embedding Predictive Architecture from Pixels},
-  author={Maes, Lucas and Le Lidec, Quentin and Scieur, Damien and LeCun, Yann and Balestriero, Randall},
-  journal={arXiv preprint},
-  year={2026}
-}
-```
+## Installation
 
-## Using the code
-This codebase builds on [stable-worldmodel](https://github.com/galilai-group/stable-worldmodel) for environment management, planning, and evaluation, and [stable-pretraining](https://github.com/galilai-group/stable-pretraining) for training. Together they reduce this repository to its core contribution: the model architecture and training objective.
+Requires [uv](https://docs.astral.sh/uv/) and a CUDA GPU.
 
-**Installation:**
 ```bash
+git clone https://github.com/leothecurious/insight
+cd insight
 uv sync
 ```
 
+Library versions are pinned to exact commits in `pyproject.toml`; `uv.lock` fixes the rest.
+
 ## Data
 
-Datasets use the HDF5 format for fast loading. Download the data from [HuggingFace](https://huggingface.co/collections/quentinll/lewm) and decompress with:
+Datasets and checkpoints live under `$STABLEWM_HOME` (swm's default, `~/.stable_worldmodel/`). The LeWM releases (PushT, TwoRoom) are on [HuggingFace](https://huggingface.co/collections/quentinll/lewm); decompress with `tar --zstd -xvf archive.tar.zst`.
 
-```bash
-tar --zstd -xvf archive.tar.zst
+## Layout
+
+```
+insight/     research code: envs, data (frames, nuisance), models, losses, planning, metrics
+scripts/     Hydra entry points: train, eval, measure, collect
+configs/     one config root for every script
+tests/       regression tests for silent failures
+licenses/    licenses of ported code
 ```
 
-Place the extracted `.h5` files under `<data>/datasets/`. The roots come from `config/paths/local.yaml`, which is untracked: copy `config/paths/local.yaml.template` and set `data` (datasets) and `runs` (checkpoints, training logs and results). Without the file both default to `$STABLEWM_HOME` (`~/.stable_worldmodel/`), and `paths.data=...` on the command line overrides either.
+## Contributing
 
-Dataset names are specified without the `.h5` extension. For example, `config/train/data/pusht.yaml` references `pusht_expert_train`, which resolves to `<data>/datasets/pusht_expert_train.h5`.
+Read [AGENTS.md](AGENTS.md) first: it holds the design rules (reuse the libraries' canonical usage, one pipeline, one change per experiment arm) and the branch and commit conventions. Branch from `dev`, open PRs against `dev`, and name any deviation from library usage in the PR.
 
-## Training
+## License
 
-`jepa.py` contains the PyTorch implementation of LeWM. Training is configured via [Hydra](https://hydra.cc/) config files under `config/train/`.
-
-Before training, set your WandB `entity` and `project` in `config/train/lewm.yaml`:
-```yaml
-wandb:
-  config:
-    entity: your_entity
-    project: your_project
-```
-
-To launch training:
-```bash
-uv run train.py data=pusht
-```
-
-Checkpoints are saved to `<runs>/checkpoints/<subdir>`, and `metrics.csv` to `<runs>/spt/<subdir>/runs`.
-
-For baseline scripts, see the stable-worldmodel [scripts](https://github.com/galilai-group/stable-worldmodel/tree/main/scripts/train) folder.
-
-## Planning
-
-Evaluation configs live under `config/eval/`. Set the `policy` field to the checkpoint path **relative to `$STABLEWM_HOME`**, without the `_object.ckpt` suffix:
-
-```bash
-# ✓ correct
-uv run eval.py --config-name=pusht.yaml policy=pusht/lewm
-
-# ✗ incorrect
-uv run eval.py --config-name=pusht.yaml policy=pusht/lewm_object.ckpt
-```
-
-## Metrics
-
-`measure.py` computes state and reverse probes and effective rank for one checkpoint. Configs live under `config/measure/`; `policy` resolves as in `eval.py`. Latents are saved next to the results, and `latents_path=<file>` reruns the metrics without re-encoding.
-
-```bash
-uv run measure.py --config-name=pusht policy=pusht_seed1/weights_epoch_10.pt
-uv run pytest
-```
-
-## Pretrained Checkpoints
-
-Pretrained LeWM checkpoints for each environment are mirrored on the Hugging Face
-Hub (model repos), alongside the datasets (dataset repos) in the same collection:
-
-- [`quentinll/lewm-pusht`](https://huggingface.co/quentinll/lewm-pusht)
-- [`quentinll/lewm-cube`](https://huggingface.co/quentinll/lewm-cube)
-- [`quentinll/lewm-tworooms`](https://huggingface.co/quentinll/lewm-tworooms)
-- [`quentinll/lewm-reacher`](https://huggingface.co/quentinll/lewm-reacher)
-
-The full baseline checkpoint suite (PLDM, LeJEPA, IVL, IQL, GCBC, DINO-WM, DINO-WM-noprop)
-is available on [Google Drive](https://drive.google.com/drive/folders/1r31os0d4-rR0mdHc7OlY_e5nh3XT4r4e):
-
-<div align="center">
-
-| Method | two-room | pusht | cube | reacher |
-|:---:|:---:|:---:|:---:|:---:|
-| pldm | ✓ | ✓ | ✓ | ✓ |
-| lejepa | ✓ | ✓ | ✓ | ✓ |
-| ivl | ✓ | ✓ | ✓ | — |
-| iql | ✓ | ✓ | ✓ | — |
-| gcbc | ✓ | ✓ | ✓ | — |
-| dinowm | ✓ | ✓ | — | — |
-| dinowm_noprop | ✓ | ✓ | ✓ | ✓ |
-
-</div>
-
-## Loading a checkpoint
-
-### From the Drive archive
-
-Each tar archive contains two files per checkpoint:
-- `<name>_object.ckpt` — a serialized Python object for convenient loading; this is what `eval.py` and the `stable_worldmodel` API use
-- `<name>_weight.ckpt` — a weights-only checkpoint (`state_dict`) for cases where you want to load weights into your own model instance
-
-Place the extracted files under `$STABLEWM_HOME/` and load via:
-
-```python
-import stable_worldmodel as swm
-
-# Load the cost model (for MPC)
-cost = swm.policy.AutoCostModel('pusht/lewm')
-```
-
-`AutoCostModel` accepts:
-- `run_name` — checkpoint path **relative to `$STABLEWM_HOME`**, without the `_object.ckpt` suffix
-- `cache_dir` — optional override for the checkpoint root (defaults to `$STABLEWM_HOME`)
-
-The returned module is in `eval` mode with its PyTorch weights accessible via `.state_dict()`.
-
-### From the Hugging Face mirror
-
-The HF model repos ship the LeWM checkpoint as a `weights.pt` (state dict) plus a
-`config.json` describing the model. Convert once to produce the `_object.ckpt`
-that `eval.py` expects:
-
-```bash
-# download weights.pt + config.json
-uv run hf download quentinll/lewm-pusht --local-dir $STABLEWM_HOME/hf_pusht
-
-# convert to object checkpoint under $STABLEWM_HOME/pusht/lewm_object.ckpt
-uv run python - <<'PY'
-import json, torch, stable_pretraining as spt
-from pathlib import Path
-from jepa import JEPA
-from module import ARPredictor, Embedder, MLP
-import stable_worldmodel as swm
-
-src = Path(swm.data.utils.get_cache_dir(), "hf_pusht")
-out = Path(swm.data.utils.get_cache_dir(), "pusht", "lewm_object.ckpt")
-
-cfg = json.loads((src / "config.json").read_text())
-encoder = spt.backbone.utils.vit_hf(
-    cfg["encoder"]["size"],
-    patch_size=cfg["encoder"]["patch_size"],
-    image_size=cfg["encoder"]["image_size"],
-    pretrained=False, use_mask_token=False,
-)
-mlp = lambda k: MLP(input_dim=cfg[k]["input_dim"], output_dim=cfg[k]["output_dim"],
-                    hidden_dim=cfg[k]["hidden_dim"], norm_fn=torch.nn.BatchNorm1d)
-model = JEPA(
-    encoder=encoder,
-    predictor=ARPredictor(**cfg["predictor"]),
-    action_encoder=Embedder(**cfg["action_encoder"]),
-    projector=mlp("projector"),
-    pred_proj=mlp("pred_proj"),
-)
-sd = torch.load(src / "weights.pt", map_location="cpu", weights_only=False)
-model.load_state_dict(sd, strict=True)
-out.parent.mkdir(parents=True, exist_ok=True)
-torch.save(model, out)
-PY
-```
-
-After conversion, load via `swm.policy.AutoCostModel('pusht/lewm')` as usual.
-
-## Contact & Contributions
-Feel free to open [issues](https://github.com/lucas-maes/le-wm/issues)! For questions or collaborations, please contact `lucas.maes@mila.quebec`
+MIT. Ported code keeps its original license in [`licenses/`](licenses/).

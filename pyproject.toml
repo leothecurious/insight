@@ -1,31 +1,38 @@
+[build-system]
+requires = ["setuptools>=77"]
+build-backend = "setuptools.build_meta"
+
 [project]
-name = "le-wm"
+name = "insight"
 version = "0.1.0"
-description = "LeWorldModel (LeWM) training and evaluation scripts"
+description = "Research on failure modes of JEPA world models, built on stable-worldmodel, stable-envs and stable-pretraining"
 readme = "README.md"
-requires-python = "==3.10.18"
+license = "MIT"
+license-files = ["LICENSE", "licenses/*.txt"]
+requires-python = "==3.10.*"
 dependencies = [
-    "h5py>=3.16.0",
-    "hdf5plugin>=7.1.0",
-    "huggingface-hub>=0.34,<1.0",
-    "scikit-learn>=1.7.2",
-    "scipy>=1.15.3",
+    "stable-worldmodel[train,format]",
+    "stable-envs[pusht,navigation]",
     "stable-pretraining==0.1.8",
-    "stable-worldmodel[all,env,format,train]",
     "torch==2.11.0",
     "torchvision==0.26.0",
-    "transformers==4.57.6",
+    "scikit-learn>=1.7",
 ]
 
 [dependency-groups]
-dev = ["pytest>=8"]
+dev = ["pytest>=8", "ruff>=0.8"]
 
-[tool.pytest.ini_options]
-pythonpath = ["."]
-testpaths = ["tests"]
-
-[tool.uv]
-package = false
+[tool.setuptools.packages.find]
+include = ["insight*"]
 
 [tool.uv.sources]
-stable-worldmodel = { git = "https://github.com/galilai-group/stable-worldmodel", rev = "10c26dbd5677083fa31dba69eb738b973845e9a4" }
+# Exact commits: State field paths and the LeWM module change between releases.
+stable-worldmodel = { git = "https://github.com/galilai-group/stable-worldmodel", rev = "21446f1ede6d5284e981bd7b47f432b994e6d812" }
+stable-envs = { git = "https://github.com/galilai-group/stable-envs", rev = "e2715139fd5e581f57f20cd0d2393b539351d37d" }
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py310"
