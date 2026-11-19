@@ -16,7 +16,6 @@ paths:
 
 seed: 0
 device: cuda
-threads: 8 # CPU threads for encoding and the probes
 
 # Windows are drawn from the run's training episodes (probe train side) and validation episodes
 # (probe test side, predictor-vs-copy).

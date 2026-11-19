@@ -14,7 +14,6 @@ import hydra
 import stable_worldmodel as swm
 import torch
 from omegaconf import OmegaConf
-from threadpoolctl import threadpool_limits
 
 from insight.data.build import build
 from insight.metrics import data, predictor, suite
@@ -47,9 +46,6 @@ def get_latents(cfg, train, model, path):
 
 @hydra.main(version_base=None, config_path="../configs", config_name="measure")
 def run(cfg):
-    # The sklearn probes otherwise take every core of a shared host.
-    threadpool_limits(cfg.threads)
-    torch.set_num_threads(cfg.threads)
     run_dir = Path(swm.data.utils.get_cache_dir(cfg.paths.runs, sub_folder="checkpoints"), cfg.run)
     run_dir = run_dir.resolve()
     train = OmegaConf.load(run_dir / "config.yaml")
