@@ -18,3 +18,9 @@ eval:
   observation_leaf: agent.position
   proprio_columns: [0, 1]
   reset_options: {state: pos_agent, target_state: goal_pos_agent}
+measure:
+  columns:
+    - {column: pos_agent, dim: 2} # agent_x, agent_y
+  targets:
+    - {name: agent_x, column: pos_agent, index: 0}
+    - {name: agent_y, column: pos_agent, index: 1}

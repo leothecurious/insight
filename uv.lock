@@ -750,6 +750,7 @@ dependencies = [
     { name = "stable-envs", extra = ["navigation", "pusht"] },
     { name = "stable-pretraining" },
     { name = "stable-worldmodel", extra = ["format", "train"] },
+    { name = "threadpoolctl" },
     { name = "torch" },
     { name = "torchvision" },
 ]
@@ -766,6 +767,7 @@ requires-dist = [
     { name = "stable-envs", extras = ["pusht", "navigation"], git = "https://github.com/galilai-group/stable-envs?rev=e2715139fd5e581f57f20cd0d2393b539351d37d" },
     { name = "stable-pretraining", specifier = "==0.1.8" },
     { name = "stable-worldmodel", extras = ["train", "format"], git = "https://github.com/galilai-group/stable-worldmodel?rev=21446f1ede6d5284e981bd7b47f432b994e6d812" },
+    { name = "threadpoolctl", specifier = ">=3.8.0" },
     { name = "torch", specifier = "==2.11.0" },
     { name = "torchvision", specifier = "==0.26.0" },
 ]

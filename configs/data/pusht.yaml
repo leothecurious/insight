@@ -23,3 +23,14 @@ eval:
   observation_leaf: current.observation
   proprio_columns: [0, 1, 5, 6]
   reset_options: {state: state, goal_state: goal_state}
+# What measure decodes from the latents: each target is column[:, index] in dataset units, angles
+# periodic. columns gives the expected width of each column.
+measure:
+  columns:
+    - {column: state, dim: 7} # agent_x, agent_y, block_x, block_y, block_angle, agent_vx, agent_vy
+  targets:
+    - {name: agent_x, column: state, index: 0}
+    - {name: agent_y, column: state, index: 1}
+    - {name: block_x, column: state, index: 2}
+    - {name: block_y, column: state, index: 3}
+    - {name: block_angle, column: state, index: 4, angle: true}
