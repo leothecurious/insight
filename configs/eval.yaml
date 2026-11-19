@@ -1,0 +1,28 @@
+defaults:
+  - _self_
+  - solver: cem
+  - objective: goal_mse
+  - launcher: local
+  - optional local: local
+
+# The run's folder holds weights_epoch_N.pt, config.json and config.yaml. weights: random plans nothing.
+run: ???
+weights: ???
+
+paths:
+  data: null # holds datasets/
+  runs: null # holds checkpoints/
+
+seed: 42
+env_device: cpu # the stable-envs environments
+render_device: cuda # the frames, as in training
+
+# Start and goal pairs from the dataset: the goal is goal_offset_steps after the start.
+num_eval: 50
+goal_offset_steps: 25
+eval_budget: 50
+
+# action_block and history_len come from the run: its frameskip and wm.history_size.
+plan_config:
+  horizon: 5
+  receding_horizon: 5

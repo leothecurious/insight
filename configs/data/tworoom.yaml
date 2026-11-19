@@ -14,3 +14,7 @@ frames:
   leaves:
     agent: {leaf: agent.position, column: pos_agent, columns: [0, 2]}
   zero: []
+eval:
+  observation_leaf: agent.position
+  proprio_columns: [0, 1]
+  reset_options: {state: pos_agent, target_state: goal_pos_agent}

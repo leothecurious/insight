@@ -53,7 +53,8 @@ class Frames(nn.Module):
         return self._states[n]
 
     @torch.no_grad()
-    def forward(self, batch):
+    def draw(self, batch):
+        """Return ``(B * T, H, W, 3)`` uint8 frames of the ``(B, T, D)`` columns of ``batch``."""
         column = self.leaves[0][1]
         b, t = batch[column].shape[:2]
         env = self._env_on(batch[column].device)
@@ -66,6 +67,22 @@ class Frames(nn.Module):
         frames = env.render(state, size=self.spec["size"])
         for overlay in self.overlays:
             frames = overlay(frames, batch)
+        return frames
+
+    def columns(self, state):
+        """Read the columns of a State, shaped ``(B, 1, D)``: the inverse of what ``draw`` writes."""
+        out = {}
+        for leaf, column, start, stop in self.leaves:
+            field = get_field(state, leaf)
+            if column not in out:
+                width = max(stop for _, c, _, stop in self.leaves if c == column)
+                out[column] = field.new_zeros(field.shape[0], 1, width)
+            out[column][..., start:stop] = field.reshape(field.shape[0], 1, stop - start)
+        return out
+
+    def forward(self, batch):
+        b, t = batch[self.leaves[0][1]].shape[:2]
+        frames = self.draw(batch)
         h, w = frames.shape[1:3]
         batch["pixels"] = frames.permute(0, 3, 1, 2).reshape(b, t, 3, h, w).float().div_(255)
         return batch

@@ -33,6 +33,26 @@ def split_episodes(dataset, val_fraction, seed):
     )
 
 
+def fit_scalers(cfg, dataset, mask):
+    """Z-score scalers of the ``normalize`` columns, fitted on the rows of the training episodes."""
+    in_train = np.repeat(mask, dataset.lengths)
+    return {
+        column: swm.data.ZScoreScaler().fit(dataset.get_col_data(column)[in_train])
+        for column in cfg["normalize"]
+    }
+
+
+def scalers(cfg, seed):
+    """The scalers that ``build`` applies, for consumers outside the training loop such as planning."""
+    cfg = OmegaConf.to_container(cfg, resolve=True)
+    dataset = swm.data.load_dataset(**cfg["dataset"])
+    if "val" in cfg["split"]:
+        mask = np.ones(len(dataset.lengths), dtype=bool)
+    else:
+        mask = split_episodes(dataset, cfg["split"]["val_fraction"], seed)[2]
+    return fit_scalers(cfg, dataset, mask)
+
+
 def build(cfg, seed):
     """Return ``(train, val)`` for a ``data`` config; ``train.get_dim("action")`` is the action width."""
     cfg = OmegaConf.to_container(cfg, resolve=True)
@@ -45,11 +65,10 @@ def build(cfg, seed):
         datasets = [dataset]
 
     # Statistics come from the training episodes only.
-    in_train = np.repeat(mask, dataset.lengths)
-    normalizers = []
-    for column in cfg["normalize"]:
-        scaler = swm.data.ZScoreScaler().fit(dataset.get_col_data(column)[in_train])
-        normalizers.append(transforms.WrapTorchTransform(scaler, source=column, target=column))
+    normalizers = [
+        transforms.WrapTorchTransform(scaler, source=column, target=column)
+        for column, scaler in fit_scalers(cfg, dataset, mask).items()
+    ]
     transform = transforms.Compose(*normalizers)
     gpu_transform = spt.data.GPUCompose(
         [
