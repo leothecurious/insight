@@ -5,7 +5,7 @@ build-backend = "setuptools.build_meta"
 [project]
 name = "insight"
 version = "0.1.0"
-description = "Research on failure modes of JEPA world models, built on stable-worldmodel, stable-envs and stable-pretraining"
+description = "World-model objectives between latent and pixel prediction, built on stable-worldmodel, stable-envs and stable-pretraining"
 readme = "README.md"
 license = "MIT"
 license-files = ["LICENSE", "licenses/*.txt"]

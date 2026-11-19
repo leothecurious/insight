@@ -1,10 +1,12 @@
 <h1 align="center">insight</h1>
 
-<p align="center"><i>Probing the failure modes of JEPA world models: objectives, architectures and toy datasets on one pipeline.</i></p>
+<p align="center"><i>A workbench for world-model objectives between latent prediction and pixel prediction.</i></p>
 
 ---
 
-`insight` studies when joint-embedding predictive world models learn the wrong thing: nuisance features, memorised trajectories, collapsed dynamics. It compares objectives (LeWM, pixel twins, grounded hybrids), architectures (MotionJEPA, H-JEPA) and fast toy datasets (moving dot, PushT with nuisance tags) under one data pipeline, training loop, metric suite and planner.
+`insight` is for exploring loss formulations that bridge latent (JEPA) and pixel-level world modelling, and for measuring what each one does to the learned representation: what it encodes, how stably it trains, how much data it needs and how it holds up under nuisance. Objectives, architectures and datasets are swappable config groups over one data pipeline, training loop, metric suite and planner, so any two runs differ only in what you changed.
+
+First on the list: objectives from latent-only LeWM to pixel twins and grounded hybrids, architectures such as MotionJEPA and H-JEPA, and fast toy datasets (a moving dot, PushT with nuisance tags) next to the LeWM benchmarks.
 
 It is a thin research layer over three libraries:
 

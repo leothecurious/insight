@@ -1,6 +1,6 @@
 # insight
 
-Research code for probing failure modes of JEPA world models. It depends on three pinned libraries and holds only what they don't provide.
+Research code for exploring world-model loss formulations between latent (JEPA) and pixel prediction, and their effects on representation, training stability, sample efficiency and robustness. It depends on three pinned libraries and holds only what they don't provide.
 
 ## Layers
 
