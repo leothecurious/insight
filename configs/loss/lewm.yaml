@@ -1,0 +1,10 @@
+forward:
+  _target_: insight.losses.lewm
+  _partial_: true
+  history_size: ${wm.history_size}
+  num_preds: ${wm.num_preds}
+  sigreg_weight: 0.09
+sigreg:
+  knots: 17
+  num_proj: 1024
+modules: {}

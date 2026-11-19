@@ -1,9 +1,70 @@
 defaults:
   - _self_
   - data: pusht
+  - model: lewm
+  - loss: lewm
+  - launcher: local
+  - optional local: local
+
+# One run name for the weights, config.yaml, resume state and metrics. Rerunning a name resumes it.
+run: lewm
+
+# null: STABLEWM_HOME, else ~/.stable_worldmodel. Set in local/local.yaml.
+paths:
+  data: null # holds datasets/
+  runs: null # holds checkpoints/
 
 seed: 3072
+num_workers: 6
 img_size: 224
+patch_size: 14
+encoder_scale: tiny
+embed_dim: 192
+
 wm:
   history_size: 3
   num_preds: 1
+
+data:
+  dataset:
+    cache_dir: ${paths.data}
+
+trainer:
+  max_epochs: 100
+  devices: auto
+  accelerator: gpu
+  precision: bf16
+  gradient_clip_val: 1.0
+  deterministic: false
+
+loader:
+  batch_size: 128
+  num_workers: ${num_workers}
+  drop_last: true
+  persistent_workers: true
+  prefetch_factor: 3
+  pin_memory: true
+  shuffle: true
+
+optimizer:
+  type: AdamW
+  lr: 5e-5
+  weight_decay: 1e-3
+
+# Weights are saved at these epochs and the last one (null: every epoch).
+checkpoint:
+  epochs: [5, 10]
+
+# Opened before any work starts; the keys are WandbLogger arguments.
+wandb:
+  enabled: false
+  config:
+    entity: leothecurious-none
+    project: insight
+    name: ${run}
+    id: ${run}
+    group: null
+    tags: []
+    job_type: train
+    resume: allow
+    save_code: true

@@ -4,18 +4,12 @@ import numpy as np
 import torch
 from hydra import compose, initialize_config_dir
 from stable_pretraining.data import dataset_stats
-from stable_worldmodel.data import HDF5Writer
 from torch.utils.data import DataLoader
+from toy import agent_position, write_toy_tworoom
 
 from insight.data.build import build
 
 CONFIGS = Path(__file__).resolve().parents[1] / "configs"
-EPISODES, STEPS = 10, 12
-
-
-def agent_position(ep, step):
-    """Pixel position of the agent: x moves 10 px per step, y 3 px per step and 12 px per episode."""
-    return np.stack([30 + 10 * step, 40 + 12 * ep + 3 * step], axis=-1).astype(np.float32)
 
 
 def test_frames_follow_state_rows(tmp_path, monkeypatch):
@@ -25,21 +19,8 @@ def test_frames_follow_state_rows(tmp_path, monkeypatch):
     10 px away.
     """
     monkeypatch.setenv("STABLEWM_HOME", str(tmp_path))
-    steps = np.arange(STEPS)
-    action = np.zeros((STEPS, 2), np.float32)
-    action[0] = np.nan
-    episodes = [
-        {
-            "action": action,
-            "pos_agent": agent_position(ep, steps),
-            "ep_idx": np.full(STEPS, ep, np.int32),
-            "step_idx": steps.astype(np.int64),
-        }
-        for ep in range(EPISODES)
-    ]
     path = tmp_path / "toy.h5"
-    with HDF5Writer(path) as writer:
-        writer.write_episodes(episodes)
+    write_toy_tworoom(path)
 
     with initialize_config_dir(str(CONFIGS), version_base=None):
         cfg = compose("train", overrides=["data=tworoom"])
