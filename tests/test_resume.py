@@ -16,7 +16,7 @@ spec.loader.exec_module(train_script)
 EPOCHS = 3
 
 
-def fit(data, runs, run):
+def fit(data, runs, run, device):
     overrides = [
         "data=tworoom",
         f"data.dataset.name={data}",
@@ -30,14 +30,17 @@ def fit(data, runs, run):
         "model.predictor.heads=2",
         "model.predictor.dim_head=8",
         "model.predictor.mlp_dim=32",
-        "trainer.accelerator=cpu",
         "trainer.devices=1",
-        "trainer.precision=32",
         f"trainer.max_epochs={EPOCHS}",
         "+trainer.limit_train_batches=3",
         "+trainer.limit_val_batches=1",
         "+trainer.log_every_n_steps=1",
     ]
+    if device == "cpu":
+        overrides += ["trainer.accelerator=cpu", "trainer.precision=32"]
+    else:
+        # GPU kernels may differ from run to run unless deterministic, which would mask the resume.
+        overrides += ["trainer.accelerator=gpu", "+trainer.deterministic=true"]
     with initialize_config_dir(config_dir=str(ROOT / "configs"), version_base=None):
         train_script.run(compose("train", overrides=overrides))
     return runs / "checkpoints" / run
@@ -56,18 +59,28 @@ def metrics(run_dir):
     return values
 
 
-def test_resume_after_a_kill_matches_an_uninterrupted_run(tmp_path, monkeypatch):
+@pytest.mark.parametrize(
+    "device",
+    [
+        "cpu",
+        pytest.param(
+            "cuda", marks=pytest.mark.skipif(not torch.cuda.is_available(), reason="no GPU")
+        ),
+    ],
+)
+def test_resume_after_a_kill_matches_an_uninterrupted_run(tmp_path, monkeypatch, device):
     """A run killed after epoch 0 and rerun matches an uninterrupted one in weights and per-step losses.
 
     A resume that drops the optimizer, scheduler or RNG state, or repeats an epoch, trains to other
-    weights.
+    weights. On a GPU, the predictor's dropout also draws from the CUDA generator, which must be
+    restored too.
     """
     monkeypatch.setenv("STABLEWM_HOME", str(tmp_path / "home"))
     data = tmp_path / "toy.h5"
     write_toy_tworoom(data)
     runs = tmp_path / "runs"
 
-    whole = fit(data, runs, "whole")
+    whole = fit(data, runs, "whole", device)
 
     save = ModelCheckpoint.on_train_epoch_end
     epochs_run = []
@@ -81,9 +94,9 @@ def test_resume_after_a_kill_matches_an_uninterrupted_run(tmp_path, monkeypatch)
 
     monkeypatch.setattr(ModelCheckpoint, "on_train_epoch_end", save_then_die)
     with pytest.raises(RuntimeError, match="killed"):
-        fit(data, runs, "killed")
+        fit(data, runs, "killed", device)
     killed = True
-    resumed = fit(data, runs, "killed")
+    resumed = fit(data, runs, "killed", device)
 
     assert epochs_run == [0, 1, 2]  # the rerun continues at epoch 1
     name = f"weights_epoch_{EPOCHS}.pt"
