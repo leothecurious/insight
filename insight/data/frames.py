@@ -16,17 +16,15 @@ class Frames(nn.Module):
     """Write ``(B, T, D)`` state columns into States and set ``batch["pixels"]`` to ``(B, T, 3, H, W)`` floats in [0, 1].
 
     Fields not named in ``spec["leaves"]`` keep their ``env.reset(seed=0)`` values, and the fields in
-    ``spec["zero"]`` are cleared. ``overlays`` are applied in order to the uint8 frames, each as
-    ``overlay(frames, batch) -> frames``.
+    ``spec["zero"]`` are cleared.
     """
 
-    def __init__(self, spec, overlays=()):
+    def __init__(self, spec):
         super().__init__()
         if OmegaConf.is_config(spec):
             spec = OmegaConf.to_container(spec, resolve=True)
         self.spec = dict(spec)
         self.leaves = [(v["leaf"], v["column"], *v["columns"]) for v in spec["leaves"].values()]
-        self.overlays = list(overlays)
         self._env = self._template = None
         self._states = {}
 
@@ -36,15 +34,12 @@ class Frames(nn.Module):
         return state
 
     def _env_on(self, device):
-        if self._env is None or self._env.device != device:
-            if self._env is not None:
-                self._env.close()
+        if self._env is None:
             self._env = snv.make(
                 self.spec["env"], num_envs=1, device=str(device), **(self.spec.get("kwargs") or {})
             )
             self._env.reset(seed=0)
             self._template = self._env.get_state()
-            self._states = {}
         return self._env
 
     def _state(self, n):
@@ -64,10 +59,7 @@ class Frames(nn.Module):
             field.copy_(batch[column][..., start:stop].reshape(field.shape).to(field.dtype))
         for leaf in self.spec.get("zero") or ():
             get_field(state, leaf).zero_()
-        frames = env.render(state, size=self.spec["size"])
-        for overlay in self.overlays:
-            frames = overlay(frames, batch)
-        return frames
+        return env.render(state, size=self.spec["size"])
 
     def columns(self, state):
         """Read the columns of a State, shaped ``(B, 1, D)``: the inverse of what ``draw`` writes."""
