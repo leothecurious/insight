@@ -1,0 +1,4 @@
+# @package _global_
+# Baseline plus a corner square whose colour is constant within an episode and differs across episodes.
+defaults:
+  - /nuisance: tag_episode

@@ -1,0 +1,4 @@
+# @package _global_
+# Enigma's obsessed-encoder baseline: LeWM on clean Push-T frames. The three arms below each change one thing from it.
+defaults:
+  - override /data: pusht
