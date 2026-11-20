@@ -26,7 +26,8 @@ from insight.planning.task import ENV_ID
 @hydra.main(version_base=None, config_path="../configs", config_name="eval")
 def run(cfg):
     run_dir = Path(swm.data.utils.get_cache_dir(cfg.paths.runs, sub_folder="checkpoints"), cfg.run)
-    train = OmegaConf.load(run_dir.resolve() / "config.yaml")
+    run_dir = run_dir.resolve()
+    train = OmegaConf.load(run_dir / "config.yaml")
     train.data.dataset.cache_dir = cfg.paths.data
     plan = swm.PlanConfig(
         **cfg.plan_config,
