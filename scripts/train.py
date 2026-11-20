@@ -17,7 +17,7 @@ from omegaconf import OmegaConf, open_dict
 from stable_pretraining.callbacks.queue import OnlineQueue
 from stable_worldmodel.wm.loss import SIGReg
 
-from insight.callbacks import RNGStateCallback, SaveWeights
+from insight.callbacks import SaveWeights
 from insight.data.build import build
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -110,7 +110,6 @@ def run(cfg):
             cfg.checkpoint.epochs,
             cache_dir=cfg.paths.runs,
         ),
-        RNGStateCallback(train),
     ]
     if cfg.monitor.enabled:
         # RankMe reads this queue; declared here only to turn off its per-step fill logging.
