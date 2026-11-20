@@ -8,6 +8,8 @@ defaults:
 
 # One run name for the weights, config.yaml, resume state and metrics. Rerunning a name resumes it.
 run: lewm
+# The run name without its seed: W&B groups a series' seeds by it (docs/naming.md).
+series: ${eval:'"${run}".rsplit("_s", 1)[0]'}
 
 # null: STABLEWM_HOME, else ~/.stable_worldmodel. Set in local/local.yaml.
 paths:
@@ -67,7 +69,6 @@ wandb:
     project: insight
     name: ${run}
     id: ${run}
-    # The run name without its seed, so W&B aggregates the seeds of one arm (docs/naming.md).
-    job_type: ${eval:'"${run}".rsplit("_s", 1)[0]'}
+    job_type: train
     resume: allow
     save_code: true

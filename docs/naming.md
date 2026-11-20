@@ -20,6 +20,15 @@ Name only what the run is about. Hyperparameters tuned for a method, but not the
 
 W&B never reuses a deleted run id, so a run that is retrained after its W&B run was deleted takes a new name.
 
-## W&B groups
+## W&B
 
-Each experiment is one W&B group (`+wandb.config.group=<experiment>`), named in the same shorthand, e.g. `lewm_repro`. Its runs are the baseline and the arms compared against it. A run's `job_type` is its name without the seed, so grouping the workspace by group and then job type draws each arm as one line, the mean over its seeds with a std-dev band. A Flywheel Results node links the group page rather than each run. Runs kept on W&B back a result; debug and smoke runs are deleted.
+| Level | Holds | Example |
+| --- | --- | --- |
+| project `insight` | every run, so any two can be compared | |
+| group | one Flywheel Experiment, named by its slug (`+wandb.config.group=<slug>`) | `insight-pusht-lewm-training` |
+| `config.series` | one arm of that Experiment: the run name without `_s<seed>`, set by `train.yaml` | `lewm_pusht_ep10` |
+| run | one seed | `lewm_pusht_ep10_s1` |
+
+Grouping the workspace by group and then `config.series` draws each arm as one line, the mean over its seeds with a std-dev band. A Flywheel Result links its Experiment's group page. Tags label runs across experiments (`reproduction`), and a W&B Report collects several experiments on one page. `job_type` keeps W&B's meaning, the run's role (`train`).
+
+Runs kept on W&B back a result; debug and smoke runs are deleted.
