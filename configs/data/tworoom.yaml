@@ -1,0 +1,24 @@
+dataset:
+  name: tworoom.h5
+  frameskip: 5
+  num_steps: ${eval:'${wm.history_size} + ${wm.num_preds}'}
+  keys_to_load: [action, pos_agent, ep_idx, step_idx]
+  keys_to_cache: ${.keys_to_load}
+ids: {episode: ep_idx, step: step_idx}
+normalize: [action]
+split: {val_fraction: 0.1}    # or val: {name: <file>} for a separate validation set
+frames:
+  env: TwoRoom
+  size: ${img_size}
+  leaves:
+    agent: {leaf: agent.position, column: pos_agent, columns: [0, 2]}
+eval:
+  observation_leaf: agent.position
+  proprio_columns: [0, 1]
+  reset_options: {state: pos_agent, target_state: goal_pos_agent}
+measure:
+  columns:
+    - {column: pos_agent, dim: 2} # agent_x, agent_y
+  targets:
+    - {name: agent_x, column: pos_agent, index: 0}
+    - {name: agent_y, column: pos_agent, index: 1}

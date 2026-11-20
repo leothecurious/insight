@@ -1,0 +1,39 @@
+defaults:
+  - _self_
+  - launcher: local
+  - optional local: local
+
+# The run's folder holds weights_epoch_N.pt, config.json and config.yaml. weights: random measures an
+# untrained model built from the run's config. Targets come from the run's data.measure.
+run: ???
+weights: ???
+latents_path: null # reuse saved latents instead of encoding
+wandb: true # write the results to the run's W&B summary when the run used W&B
+
+paths:
+  data: null # holds datasets/
+  runs: null # holds checkpoints/
+
+seed: 0
+device: cuda
+
+# Windows are drawn from the run's training episodes (probe train side) and validation episodes
+# (probe test side, predictor-vs-copy).
+windows:
+  frames: 33 # observations per window
+  min_frames: 4 # episodes with fewer frames are skipped
+  n_train: 800
+  n_val: 200
+  start: episode_start # episode_start | any_start
+  precision: fp32 # fp32 | bf16 | fp16
+  batch_size: 16
+  num_workers: 0
+
+metrics:
+  - {name: state_probe, groups: [state], kinds: [linear, mlp], windows: [1]}
+  - {name: reverse_probe, groups: [state], kinds: [linear, mlp]}
+  - {name: rank_spectrum, frame: null} # every valid frame; frame 0 is the episode start
+
+# predictor error against copying the last context embedding, on the validation windows; delete to skip
+pred_copy:
+  batch_size: 512
