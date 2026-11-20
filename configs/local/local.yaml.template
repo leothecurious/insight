@@ -1,11 +1,5 @@
 # @package _global_
-# Machine-specific settings. Copy to local.yaml (gitignored) and edit.
-paths:
-  data: ${oc.env:STABLEWM_HOME,null} # holds datasets/
-  runs: ${oc.env:STABLEWM_HOME,null} # holds checkpoints/
-
-num_workers: 6
-
-trainer:
-  devices: auto
-  precision: bf16
+# Machine-specific settings. Copy to local.yaml (gitignored) and uncomment what differs here.
+# paths:
+#   data: /abs/path # holds datasets/
+#   runs: /abs/path # holds checkpoints/

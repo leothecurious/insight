@@ -3,17 +3,15 @@ dataset:
   frameskip: 5
   num_steps: ${eval:'${wm.history_size} + ${wm.num_preds}'}
   keys_to_load: [action, pos_agent, ep_idx, step_idx]
-  keys_to_cache: [action, pos_agent, ep_idx, step_idx]
+  keys_to_cache: ${.keys_to_load}
 ids: {episode: ep_idx, step: step_idx}
 normalize: [action]
 split: {val_fraction: 0.1}    # or val: {name: <file>} for a separate validation set
 frames:
   env: TwoRoom
-  kwargs: {}
   size: ${img_size}
   leaves:
     agent: {leaf: agent.position, column: pos_agent, columns: [0, 2]}
-  zero: []
 # State columns the online probe decodes from every frame's embedding during training.
 probe: {column: pos_agent, columns: [0, 2]}
 eval:
