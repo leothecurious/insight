@@ -55,7 +55,6 @@ def state_probe(
     max_train=20000,
     max_test=5000,
     seed=0,
-    **_,
 ):
     """Decode each target from the latent with each probe kind and window.
 
@@ -89,7 +88,6 @@ def reverse_probe(
     max_train=20000,
     max_test=5000,
     seed=0,
-    **_,
 ):
     """Share of latent variance the true state explains: variance-weighted
     R^2 of the latent regressed on the targets in ``groups``."""
@@ -113,7 +111,7 @@ def effective_rank(Z):
     return float(torch.exp(-(p * p.clamp_min(1e-12).log()).sum())), sv
 
 
-def rank_spectrum(lat, frame=None, top=32, **_):
+def rank_spectrum(lat, frame=None, top=32):
     """Effective rank, top-2 variance share and PCA spectrum of the latents
     of one window frame, or of every valid frame when ``frame`` is None."""
     if frame is None:
