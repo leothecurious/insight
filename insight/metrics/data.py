@@ -92,17 +92,20 @@ def column_targets(ds, specs):
     return np.stack(out, 1)
 
 
+def window_rows(ds, windows, num_frames):
+    """Dataset row of each window frame, shape (N, num_frames); padded frames repeat the last row."""
+    j = np.arange(num_frames)
+    return np.stack(
+        [ds.offsets[ep] + s + np.minimum(j, n - 1) * ds.frameskip for ep, s, n in windows]
+    )
+
+
 def window_targets(ds, windows, num_frames, specs):
     """Targets at each window frame, shape (N, num_frames, len(specs)).
 
     Padded frames repeat the last valid frame's target.
     """
-    per_row = column_targets(ds, specs)
-    j = np.arange(num_frames)
-    rows = np.stack(
-        [ds.offsets[ep] + s + np.minimum(j, n - 1) * ds.frameskip for ep, s, n in windows]
-    )
-    return per_row[rows]
+    return column_targets(ds, specs)[window_rows(ds, windows, num_frames)]
 
 
 def windows_loader(train, val, frame_columns, measure, w, seed):
@@ -121,8 +124,16 @@ def windows_loader(train, val, frame_columns, measure, w, seed):
         picked = sample_windows(ds, episodes, w.frames, w.min_frames, w.start, n, seed)
         windows += picked
         is_train += [side] * len(picked)
+    dataset = Windows(ds, windows, w.frames, ["action", *frame_columns])
+    # Frames come from load_chunk and targets from row indices; they must name the same rows.
+    rows = window_rows(ds, windows, w.frames)
+    probes = {0, len(windows) // 2, int(np.argmin([n for _, _, n in windows]))}
+    for c in frame_columns:
+        column = ds.get_col_data(c)
+        for i in probes:
+            np.testing.assert_array_equal(dataset[i][c].numpy(), column[rows[i]])
     loader = torch.utils.data.DataLoader(
-        Windows(ds, windows, w.frames, ["action", *frame_columns]),
+        dataset,
         batch_size=w.batch_size,
         num_workers=w.num_workers,
         shuffle=False,
