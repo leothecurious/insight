@@ -50,13 +50,16 @@ def run(cfg):
     last = np.zeros(inverse.max() + 1, np.int64)
     np.maximum.at(last, inverse, steps)
     valid = np.nonzero(steps <= last[inverse] - cfg.goal_offset_steps)[0]
+    num_eval = min(cfg.num_eval, len(valid))
+    if num_eval < cfg.num_eval:
+        print(f"only {num_eval} valid start steps, fewer than num_eval={cfg.num_eval}")
     rng = np.random.default_rng(cfg.seed)
-    picked = np.sort(valid[rng.choice(len(valid), size=cfg.num_eval, replace=False)])
+    picked = np.sort(valid[rng.choice(len(valid), size=num_eval, replace=False)])
 
     frames = Frames(OmegaConf.to_container(train.data.frames, resolve=True))
     world = swm.World(
         ENV_ID,
-        num_envs=cfg.num_eval,
+        num_envs=num_eval,
         image_shape=(frames.spec["size"],) * 2,
         max_episode_steps=2 * cfg.eval_budget,
         frames=frames,
@@ -97,11 +100,11 @@ def run(cfg):
     seconds = time.perf_counter() - start
     world.close()
 
-    print(f"success_rate {metrics['success_rate']} over {cfg.num_eval} episodes in {seconds:.0f} s")
+    print(f"success_rate {metrics['success_rate']} over {num_eval} episodes in {seconds:.0f} s")
     result = {
         "weights": cfg.weights,
         "seed": cfg.seed,
-        "num_eval": cfg.num_eval,
+        "num_eval": num_eval,
         "success_rate": metrics["success_rate"],
         "episode_successes": metrics["episode_successes"].astype(int).tolist(),
         "eval_seconds": round(seconds, 1),
