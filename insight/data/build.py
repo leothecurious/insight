@@ -59,27 +59,28 @@ def fit_scalers(cfg, dataset, mask):
     }
 
 
+def _split(cfg, seed):
+    """Return ``(dataset, train, val, mask)``: the loaded dataset, the two sides and the mask of
+    training episodes."""
+    dataset = swm.data.load_dataset(**cfg["dataset"])
+    if "val" in cfg["split"]:
+        val = swm.data.load_dataset(**{**cfg["dataset"], **cfg["split"]["val"]})
+        return dataset, dataset, val, np.ones(len(dataset.lengths), dtype=bool)
+    return dataset, *split_episodes(dataset, cfg["split"]["val_fraction"], seed)
+
+
 def scalers(cfg, seed):
     """The scalers that ``build`` applies, for consumers outside the training loop such as planning."""
     cfg = OmegaConf.to_container(cfg, resolve=True)
-    dataset = swm.data.load_dataset(**cfg["dataset"])
-    if "val" in cfg["split"]:
-        mask = np.ones(len(dataset.lengths), dtype=bool)
-    else:
-        mask = split_episodes(dataset, cfg["split"]["val_fraction"], seed)[2]
+    dataset, _, _, mask = _split(cfg, seed)
     return fit_scalers(cfg, dataset, mask)
 
 
 def build(cfg, seed):
     """Return ``(train, val)`` for a ``data`` config; ``train.get_dim("action")`` is the action width."""
     cfg = OmegaConf.to_container(cfg, resolve=True)
-    dataset = swm.data.load_dataset(**cfg["dataset"])
-    if "val" in cfg["split"]:
-        val = swm.data.load_dataset(**{**cfg["dataset"], **cfg["split"]["val"]})
-        train, mask, datasets = dataset, np.ones(len(dataset.lengths), dtype=bool), [dataset, val]
-    else:
-        train, val, mask = split_episodes(dataset, cfg["split"]["val_fraction"], seed)
-        datasets = [dataset]
+    dataset, train, val, mask = _split(cfg, seed)
+    datasets = [dataset] if isinstance(val, spt.data.Subset) else [dataset, val]
 
     # Statistics come from the training episodes only.
     normalizers = [

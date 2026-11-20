@@ -27,6 +27,7 @@ from insight.planning.task import ENV_ID
 def run(cfg):
     run_dir = Path(swm.data.utils.get_cache_dir(cfg.paths.runs, sub_folder="checkpoints"), cfg.run)
     train = OmegaConf.load(run_dir.resolve() / "config.yaml")
+    train.data.dataset.cache_dir = cfg.paths.data
     plan = swm.PlanConfig(
         **cfg.plan_config,
         action_block=train.data.dataset.frameskip,
