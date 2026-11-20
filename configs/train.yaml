@@ -31,7 +31,7 @@ data:
 
 trainer:
   max_epochs: 100
-  devices: auto
+  devices: 1
   accelerator: gpu
   precision: bf16
   gradient_clip_val: 1.0
