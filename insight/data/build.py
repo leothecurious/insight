@@ -72,7 +72,7 @@ def build(cfg, seed):
     ]
     transform = transforms.Compose(*normalizers)
     steps = [
-        Frames(cfg["frames"]),
+        Frames(cfg["frames"], cfg["ids"]),
         gpu_transforms.GPUNormalize(**dataset_stats.ImageNet, source="pixels", target="pixels"),
     ]
     gpu_transform = spt.data.GPUCompose(steps, compile=False)

@@ -1,15 +1,8 @@
-from pathlib import Path
-
 import numpy as np
 import torch
-from hydra import compose, initialize_config_dir
 from stable_pretraining.data import dataset_stats
 from torch.utils.data import DataLoader
-from toy import agent_position, write_toy_tworoom
-
-from insight.data.build import build
-
-CONFIGS = Path(__file__).resolve().parents[1] / "configs"
+from toy import agent_position, build_toy_tworoom
 
 
 def test_frames_follow_state_rows(tmp_path, monkeypatch):
@@ -18,15 +11,7 @@ def test_frames_follow_state_rows(tmp_path, monkeypatch):
     A wrong column, leaf or (B, T) layout puts the agent on another row's position, more than
     10 px away.
     """
-    monkeypatch.setenv("STABLEWM_HOME", str(tmp_path))
-    path = tmp_path / "toy.h5"
-    write_toy_tworoom(path)
-
-    with initialize_config_dir(str(CONFIGS), version_base=None):
-        cfg = compose("train", overrides=["data=tworoom"])
-    cfg.data.dataset.name = str(path)
-    cfg.data.dataset.frameskip = 2
-    train, _ = build(cfg.data, seed=0)
+    train = build_toy_tworoom(tmp_path, monkeypatch)
 
     device = "cuda" if torch.cuda.is_available() else "cpu"
     batch = next(iter(DataLoader(train, batch_size=len(train))))

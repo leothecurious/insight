@@ -1,0 +1,6 @@
+# @package data.frames.nuisance
+tag:
+  _target_: insight.data.nuisance.CornerSquare
+  size: 5
+  vary: episode
+  seed: ${seed}
