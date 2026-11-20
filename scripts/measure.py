@@ -26,19 +26,19 @@ def get_latents(cfg, train, model, path):
 
     train_set, val_set = build(train.data, train.seed)
     frame_columns = sorted({leaf.column for leaf in train.data.frames.leaves.values()})
-    loader, target, episode, is_train = data.build(
+    loader, target, episode, is_train = data.windows_loader(
         train_set, val_set, frame_columns, train.data.measure, cfg.windows, cfg.seed
     )
-    names, angle, group = data.target_meta(train.data.measure.targets)
+    targets = train.data.measure.targets
     out = extract(model, loader, train_set.dataset.gpu_transform, cfg.windows.precision)
     lat = Latents(
         **out,
         target=torch.from_numpy(target),
         episode=torch.from_numpy(episode),
         train=torch.from_numpy(is_train),
-        target_names=names,
-        target_angle=angle,
-        target_group=group,
+        target_names=[t.name for t in targets],
+        target_angle=[bool(t.get("angle", False)) for t in targets],
+        target_group=[t.get("group", "state") for t in targets],
     )
     lat.save(path)
     return lat

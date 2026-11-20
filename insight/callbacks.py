@@ -10,7 +10,7 @@ class SaveWeights(Callback):
     are kept for the epochs in ``epochs`` (None: every epoch) and for the last one.
     """
 
-    def __init__(self, run, configs, epochs, cache_dir=None):
+    def __init__(self, run, configs, epochs, cache_dir):
         super().__init__()
         self.run, self.configs, self.epochs, self.cache_dir = run, configs, epochs, cache_dir
 

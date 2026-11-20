@@ -105,15 +105,7 @@ def window_targets(ds, windows, num_frames, specs):
     return per_row[rows]
 
 
-def target_meta(specs):
-    """Names, angle flags and groups of the targets, in spec order."""
-    names = [s.name for s in specs]
-    angle = [bool(s.get("angle", False)) for s in specs]
-    groups = [s.get("group", "state") for s in specs]
-    return names, angle, groups
-
-
-def build(train, val, frame_columns, measure, w, seed):
+def windows_loader(train, val, frame_columns, measure, w, seed):
     """Loader over windows of the training and validation episodes, plus targets and split.
 
     ``train`` and ``val`` come from ``insight.data.build.build``; ``frame_columns`` are the columns

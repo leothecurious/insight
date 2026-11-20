@@ -25,8 +25,7 @@ ROOT = Path(__file__).resolve().parents[1]
 
 @hydra.main(version_base=None, config_path="../configs", config_name="train")
 def run(cfg):
-    run_dir = Path(swm.data.utils.get_cache_dir(cfg.paths.runs, sub_folder="checkpoints"), cfg.run)
-    run_dir = run_dir.resolve()
+    run_dir = Path(swm.data.utils.get_cache_dir(cfg.paths.runs, "checkpoints"), cfg.run).resolve()
     loggers = []
     if cfg.wandb.enabled:
         # Opened before any work, so a bad key or an offline run fails at once. W&B reads the commit
