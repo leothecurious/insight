@@ -25,7 +25,10 @@ def get_latents(cfg, train, model, path):
         return Latents.load(cfg.latents_path)
 
     train_set, val_set = build(train.data, train.seed)
-    frame_columns = sorted({leaf.column for leaf in train.data.frames.leaves.values()})
+    frame_columns = {leaf.column for leaf in train.data.frames.leaves.values()}
+    if train.data.frames.get("nuisance"):
+        frame_columns |= set(train.data.ids.values())
+    frame_columns = sorted(frame_columns)
     loader, target, episode, is_train = data.windows_loader(
         train_set, val_set, frame_columns, train.data.measure, cfg.windows, cfg.seed
     )
