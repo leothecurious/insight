@@ -18,8 +18,9 @@ def lewm(self, batch, stage, *, history_size, num_preds, sigreg_weight):
     # Every frame's embedding, (B * T, D), for the training-time monitors.
     output["embedding"] = emb.flatten(0, 1)
 
+    prefix = {"fit": "train", "validate": "val"}.get(stage, stage)
     self.log_dict(
-        {f"{stage}/{k}": v.detach() for k, v in output.items() if "loss" in k},
+        {f"{prefix}/{k}": v.detach() for k, v in output.items() if "loss" in k},
         on_step=True,
         sync_dist=True,
     )

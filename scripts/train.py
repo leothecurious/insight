@@ -15,6 +15,7 @@ import torch
 import torchmetrics
 from lightning.pytorch.loggers import WandbLogger
 from omegaconf import OmegaConf, open_dict
+from stable_pretraining.callbacks.queue import OnlineQueue
 from stable_worldmodel.wm.loss import SIGReg
 
 from insight.callbacks import RNGStateCallback, SaveWeights
@@ -113,14 +114,22 @@ def run(cfg):
         RNGStateCallback(train),
     ]
     if cfg.monitor.enabled:
-        callbacks.append(
-            spt.callbacks.RankMe(
-                name="rankme",
-                target="embedding",
-                queue_length=cfg.monitor.queue_length,
-                target_shape=cfg.embed_dim,
-            )
+        # RankMe reads this queue; declared here only to turn off its per-step fill logging.
+        queue = OnlineQueue(
+            "embedding",
+            cfg.monitor.queue_length,
+            cfg.embed_dim,
+            torch.float32,
+            gather_distributed=True,
+            verbose=False,
         )
+        rankme = spt.callbacks.RankMe(
+            name="rankme",
+            target="embedding",
+            queue_length=cfg.monitor.queue_length,
+            target_shape=cfg.embed_dim,
+        )
+        callbacks += [queue, rankme]
         if cfg.data.get("probe"):
             start, stop = cfg.data.probe.columns
             callbacks.append(

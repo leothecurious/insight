@@ -51,9 +51,9 @@ def metrics(run_dir):
     for path in sorted(run_dir.glob("spt/runs/*/*/*/**/metrics.csv")):
         with open(path) as f:
             for row in csv.DictReader(f):
-                if row["step"] and row.get("fit/loss"):
+                if row["step"] and row.get("train/loss"):
                     values[int(row["step"])] = {
-                        k: v for k, v in row.items() if k.startswith("fit/")
+                        k: row[k] for k in ("train/loss", "train/pred_loss", "train/sigreg_loss")
                     }
     return values
 
@@ -92,4 +92,5 @@ def test_resume_after_a_kill_matches_an_uninterrupted_run(tmp_path, monkeypatch)
     expected, actual = (torch.load(d / name, map_location="cpu") for d in (whole, resumed))
     for key, tensor in expected.items():
         torch.testing.assert_close(actual[key], tensor, rtol=0, atol=0, msg=key)
-    assert metrics(resumed) == metrics(whole)
+    logged = metrics(whole)
+    assert logged and metrics(resumed) == logged
