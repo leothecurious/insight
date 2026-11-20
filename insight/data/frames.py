@@ -7,7 +7,6 @@ State field.
 
 import stable_envs as snv
 import torch
-from omegaconf import OmegaConf
 from stable_envs import get_field
 from torch import nn
 
@@ -16,19 +15,18 @@ class Frames(nn.Module):
     """Write ``(B, T, D)`` state columns into States and set ``batch["pixels"]`` to ``(B, T, 3, H, W)`` floats in [0, 1].
 
     Fields not named in ``spec["leaves"]`` keep their ``env.reset(seed=0)`` values, and the fields in
-    ``spec["zero"]`` are cleared.
+    ``spec["zero"]`` are cleared. ``spec`` is a plain container.
     """
 
     def __init__(self, spec):
         super().__init__()
-        if OmegaConf.is_config(spec):
-            spec = OmegaConf.to_container(spec, resolve=True)
-        self.spec = dict(spec)
+        self.spec = spec
         self.leaves = [(v["leaf"], v["column"], *v["columns"]) for v in spec["leaves"].values()]
         self._env = self._template = None
         self._states = {}
 
     def __getstate__(self):
+        # gymnasium deep-copies env kwargs (Wrapper.spec); drop the live env from copies.
         state = self.__dict__.copy()
         state.update(_env=None, _template=None, _states={})
         return state
@@ -49,7 +47,7 @@ class Frames(nn.Module):
 
     @torch.no_grad()
     def draw(self, batch):
-        """Return ``(B * T, H, W, 3)`` uint8 frames of the ``(B, T, D)`` columns of ``batch``."""
+        """Return ``(B, T, H, W, 3)`` uint8 frames of the ``(B, T, D)`` columns of ``batch``."""
         column = self.leaves[0][1]
         b, t = batch[column].shape[:2]
         env = self._env_on(batch[column].device)
@@ -59,7 +57,8 @@ class Frames(nn.Module):
             field.copy_(batch[column][..., start:stop].reshape(field.shape).to(field.dtype))
         for leaf in self.spec.get("zero") or ():
             get_field(state, leaf).zero_()
-        return env.render(state, size=self.spec["size"])
+        frames = env.render(state, size=self.spec["size"])
+        return frames.reshape(b, t, *frames.shape[-3:])
 
     def columns(self, state):
         """Read the columns of a State, shaped ``(B, 1, D)``: the inverse of what ``draw`` writes."""
@@ -73,8 +72,5 @@ class Frames(nn.Module):
         return out
 
     def forward(self, batch):
-        b, t = batch[self.leaves[0][1]].shape[:2]
-        frames = self.draw(batch)
-        h, w = frames.shape[1:3]
-        batch["pixels"] = frames.permute(0, 3, 1, 2).reshape(b, t, 3, h, w).float().div_(255)
+        batch["pixels"] = self.draw(batch).permute(0, 1, 4, 2, 3).float().div_(255)
         return batch

@@ -64,7 +64,7 @@ class Task(gym.Env):
 
     def _draw(self, columns):
         batch = {k: v.to(self.frames_device) for k, v in columns.items()}
-        return self.frames.draw(batch)[0].cpu().numpy()
+        return self.frames.draw(batch)[0, 0].cpu().numpy()
 
     def _observation(self, state):
         obs = (

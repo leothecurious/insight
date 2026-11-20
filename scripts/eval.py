@@ -53,7 +53,7 @@ def run(cfg):
     rng = np.random.default_rng(cfg.seed)
     picked = np.sort(valid[rng.choice(len(valid), size=cfg.num_eval, replace=False)])
 
-    frames = Frames(train.data.frames)
+    frames = Frames(OmegaConf.to_container(train.data.frames, resolve=True))
     world = swm.World(
         ENV_ID,
         num_envs=cfg.num_eval,
