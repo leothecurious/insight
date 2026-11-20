@@ -67,6 +67,7 @@ wandb:
     project: insight
     name: ${run}
     id: ${run}
-    job_type: train
+    # The run name without its seed, so W&B aggregates the seeds of one arm (docs/naming.md).
+    job_type: ${eval:'"${run}".rsplit("_s", 1)[0]'}
     resume: allow
     save_code: true

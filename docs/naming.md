@@ -22,4 +22,4 @@ W&B never reuses a deleted run id, so a run that is retrained after its W&B run 
 
 ## W&B groups
 
-Each experiment is one W&B group (`+wandb.config.group=<experiment>`), named in the same shorthand, e.g. `lewm_repro`. Its runs are the baseline and the arms compared against it. A Flywheel Results node links the group page rather than each run. Runs kept on W&B back a result; debug and smoke runs are deleted.
+Each experiment is one W&B group (`+wandb.config.group=<experiment>`), named in the same shorthand, e.g. `lewm_repro`. Its runs are the baseline and the arms compared against it. A run's `job_type` is its name without the seed, so grouping the workspace by group and then job type draws each arm as one line, the mean over its seeds with a std-dev band. A Flywheel Results node links the group page rather than each run. Runs kept on W&B back a result; debug and smoke runs are deleted.
