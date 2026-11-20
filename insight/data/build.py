@@ -14,24 +14,6 @@ from stable_pretraining.data import dataset_stats, gpu_transforms, transforms
 from insight.data.frames import Frames
 
 
-class ProbeTarget(torch.nn.Module):
-    """Set ``batch["probe_target"]`` to the probe columns of every frame, ``(B * T, k)``, z-scored
-    with the training statistics of ``scaler`` so the online probe's loss weighs each column alike."""
-
-    def __init__(self, column, start, stop, scaler):
-        super().__init__()
-        self.column, self.start, self.stop = column, start, stop
-        # Buffers, not scaler.transform, which copies its numpy statistics to the device every batch.
-        self.register_buffer("mean", torch.as_tensor(scaler.mean[0], dtype=torch.float32))
-        std = torch.as_tensor(scaler.std[0], dtype=torch.float32)
-        self.register_buffer("std", std.clamp_min(scaler.eps))
-
-    def forward(self, batch):
-        x = batch[self.column][..., self.start : self.stop].flatten(0, 1).float()
-        batch["probe_target"] = (x - self.mean) / self.std
-        return batch
-
-
 def split_episodes(dataset, val_fraction, seed):
     """Split clips by episode. Returns two ``Subset``s and the mask of training episodes."""
     episodes = np.array([ep for ep, _ in dataset.clip_indices])
@@ -93,10 +75,6 @@ def build(cfg, seed):
         Frames(cfg["frames"]),
         gpu_transforms.GPUNormalize(**dataset_stats.ImageNet, source="pixels", target="pixels"),
     ]
-    if cfg.get("probe"):
-        column, (start, stop) = cfg["probe"]["column"], cfg["probe"]["columns"]
-        rows = dataset.get_col_data(column)[np.repeat(mask, dataset.lengths)][:, start:stop]
-        steps.append(ProbeTarget(column, start, stop, swm.data.ZScoreScaler().fit(rows)))
     gpu_transform = spt.data.GPUCompose(steps, compile=False)
     for ds in datasets:
         ds.transform = transform

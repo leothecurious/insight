@@ -12,8 +12,6 @@ frames:
   size: ${img_size}
   leaves:
     agent: {leaf: agent.position, column: pos_agent, columns: [0, 2]}
-# State columns the online probe decodes from every frame's embedding during training.
-probe: {column: pos_agent, columns: [0, 2]}
 eval:
   observation_leaf: agent.position
   proprio_columns: [0, 1]

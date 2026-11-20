@@ -751,7 +751,6 @@ dependencies = [
     { name = "stable-pretraining" },
     { name = "stable-worldmodel", extra = ["format", "train"] },
     { name = "torch" },
-    { name = "torchmetrics" },
     { name = "torchvision" },
 ]
 
@@ -768,7 +767,6 @@ requires-dist = [
     { name = "stable-pretraining", specifier = "==0.1.8" },
     { name = "stable-worldmodel", extras = ["train", "format"], git = "https://github.com/galilai-group/stable-worldmodel?rev=21446f1ede6d5284e981bd7b47f432b994e6d812" },
     { name = "torch", specifier = "==2.11.0" },
-    { name = "torchmetrics", specifier = ">=1.9.0" },
     { name = "torchvision", specifier = "==0.26.0" },
 ]
 

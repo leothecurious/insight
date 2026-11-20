@@ -12,7 +12,6 @@ import lightning as pl
 import stable_pretraining as spt
 import stable_worldmodel as swm
 import torch
-import torchmetrics
 from lightning.pytorch.loggers import WandbLogger
 from omegaconf import OmegaConf, open_dict
 from stable_pretraining.callbacks.queue import OnlineQueue
@@ -130,20 +129,6 @@ def run(cfg):
             target_shape=cfg.embed_dim,
         )
         callbacks += [queue, rankme]
-        if cfg.data.get("probe"):
-            start, stop = cfg.data.probe.columns
-            callbacks.append(
-                spt.callbacks.OnlineProbe(
-                    world_model,
-                    name="state_probe",
-                    input="embedding",
-                    target="probe_target",
-                    probe=torch.nn.Linear(cfg.embed_dim, stop - start),
-                    loss=torch.nn.MSELoss(),
-                    optimizer=dict(cfg.monitor.probe_optimizer),
-                    metrics={"r2": torchmetrics.R2Score()},
-                )
-            )
 
     trainer = pl.Trainer(
         **cfg.trainer,
