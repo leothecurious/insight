@@ -11,6 +11,8 @@ import torch
 from stable_envs import get_field
 from torch import nn
 
+from insight import envs  # noqa: F401  registers the toy environments
+
 
 class Frames(nn.Module):
     """Write ``(B, T, D)`` state columns into States and set ``batch["pixels"]`` to ``(B, T, 3, H, W)`` floats in [0, 1].
