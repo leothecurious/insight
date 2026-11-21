@@ -68,11 +68,11 @@ def run(cfg):
     extra_modules = {name: hydra.utils.instantiate(c) for name, c in cfg.loss.modules.items()}
     models = {"model": world_model, **extra_modules}
 
+    # One optimizer over the model and the loss modules, so gradient clipping sees their joint norm.
     total_steps = cfg.trainer.max_epochs * len(train)
-    optimizers = {}
-    for name in models:
-        optimizers[f"{name}_opt"] = {
-            "modules": name,
+    optimizers = {
+        "model_opt": {
+            "modules": "|".join(models),
             "optimizer": dict(cfg.optimizer),
             "scheduler": {
                 "type": "LinearWarmupCosineAnnealingLR",
@@ -81,6 +81,7 @@ def run(cfg):
             },
             "interval": "epoch",
         }
+    }
 
     data_module = spt.data.DataModule(train=train, val=val)
     world_model = spt.Module(
