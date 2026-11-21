@@ -26,10 +26,11 @@ def collect(path, frames, ids, policy, sequences, steps, seed, first_episode, ch
     are keyed by episode and step, so files that share a run seed need disjoint episode ids.
     """
     assert sequences % chunk == 0, "sequences must be a multiple of chunk"
-    assert first_episode + sequences < 2**32, "episode ids must fit the 32-bit keys of the overlays"
+    assert first_episode + sequences < 2**31, "episode ids are stored as int32"
     spec = frames.spec
     env = snv.make(spec["env"], num_envs=chunk, device=device, **(spec.get("kwargs") or {}))
-    rng = np.random.default_rng(seed)
+    # The env draws its start states from default_rng(seed); the policy needs a stream of its own.
+    rng = np.random.default_rng([seed, 1])
     length = steps + 1
     path.parent.mkdir(parents=True, exist_ok=True)
     with h5py.File(path, "x") as f:
