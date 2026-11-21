@@ -37,3 +37,16 @@ metrics:
 # predictor error against copying the last context embedding, on the validation windows; delete to skip
 pred_copy:
   batch_size: 512
+
+# Pair cosines (insight.metrics.pairs): colour = dataset frames stamped with a corner tag, t_position =
+# Push-T scenes whose goal outline is the tag and whose block pose is the content. Delete to skip.
+pairs:
+  suite: colour # colour | t_position
+  n: 256
+tag_size: 5 # corner tag of the pair metric and the colour probe; a run trained with a tag uses its own size
+
+# Decode the stamped colour from the latents; delete to skip.
+colour:
+  n: 4096
+  kinds: [ridge, mlp]
+  train_fraction: 0.8

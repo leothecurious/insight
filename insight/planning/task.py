@@ -2,7 +2,8 @@
 
 A port of the ``Task`` of stable-envs ``examples/lewm/eval.py``.
 Observations and the goal image are drawn by the run's ``Frames``, so the planner sees the frames of
-training.
+training. With nuisance overlays, a frame carries the ids of the dataset row it stands for: the start
+row's episode, and the start row plus the steps taken. The goal is the row ``goal_offset`` steps on.
 """
 
 from typing import ClassVar
@@ -57,13 +58,27 @@ class Task(gym.Env):
             leaf["column"]: goal_row[f"goal_{leaf['column']}"]
             for leaf in self.frames.spec["leaves"].values()
         }
+        # Only overlays read these, and only their datasets need to hold the id columns.
+        self._episode = self._start = self._goal_step = 0
+        if self.frames.nuisance:
+            ids = self.frames.ids
+            self._episode = int(rows[ids["episode"]])
+            self._start = int(rows[ids["step"]])
+            self._goal_step = int(rows[f"goal_{ids['step']}"])
         return {
             name: np.asarray(rows[column], np.float64)
             for name, column in self.reset_columns.items()
         }
 
-    def _draw(self, columns):
-        batch = {k: v.to(self.frames_device) for k, v in columns.items()}
+    def _draw(self, columns, step):
+        """Frame of ``columns`` as row ``step`` of the start episode, for the overlays."""
+        ids = self.frames.ids
+        batch = {
+            **columns,
+            ids["episode"]: torch.tensor([[self._episode]]),
+            ids["step"]: torch.tensor([[step]]),
+        }
+        batch = {k: v.to(self.frames_device) for k, v in batch.items()}
         return self.frames.draw(batch)[0, 0].cpu().numpy()
 
     def _observation(self, state):
@@ -87,7 +102,8 @@ class Task(gym.Env):
             k: torch.as_tensor(v, dtype=torch.float32)[None, None]
             for k, v in self._goal_columns.items()
         }
-        self._goal = self._draw(goal)
+        self._steps = 0
+        self._goal = self._draw(goal, self._goal_step)
         return self._observation(self._state), self._info()
 
     def step(self, action):
@@ -95,13 +111,14 @@ class Task(gym.Env):
             np.asarray(action), dtype=self.env.action_spec.dtype, device=self.env.device
         )
         out = self.env.step(act.reshape(1, -1), frames=None)
+        self._steps += 1
         self._state = out["state"]
         reward = float(out["reward"][0])
         terminated, truncated = bool(out["terminated"][0]), bool(out["truncated"][0])
         return self._observation(self._state), reward, terminated, truncated, self._info()
 
     def render(self):
-        return self._draw(self.frames.columns(self._state))
+        return self._draw(self.frames.columns(self._state), self._start + self._steps)
 
     def close(self):
         self.env.close()

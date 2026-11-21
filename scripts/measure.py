@@ -2,8 +2,9 @@
 
 Ported from le-wm 189a36c measure.py. The run's ``config.yaml`` gives the dataset, the frames and the
 episode split; windows of its training and validation episodes are drawn through the run's frames,
-encoded once, and every metric reads those latents. Results are appended to ``<run>/measure_results.jsonl``
-and, when the run used W&B, written to its summary.
+encoded once, and every metric reads those latents. The pair metric and the colour probe stamp their
+own tag on dataset frames (``insight.metrics.pairs``). Results are appended to
+``<run>/measure_results.jsonl`` and, when the run used W&B, written to its summary.
 """
 
 import json
@@ -16,16 +17,18 @@ import torch
 from omegaconf import OmegaConf
 
 from insight.data.build import build
-from insight.metrics import data, predictor, suite
+from insight.metrics import data, pairs, predictor, stimuli, suite
 from insight.metrics.latents import Latents, extract
 
 
-def get_latents(cfg, train, model, path):
+def get_latents(cfg, train, model, path, train_set, val_set):
     if cfg.latents_path:
         return Latents.load(cfg.latents_path)
 
-    train_set, val_set = build(train.data, train.seed)
-    frame_columns = sorted({leaf.column for leaf in train.data.frames.leaves.values()})
+    frame_columns = {leaf.column for leaf in train.data.frames.leaves.values()}
+    if train.data.frames.get("nuisance"):
+        frame_columns |= set(train.data.ids.values())
+    frame_columns = sorted(frame_columns)
     loader, target, episode, is_train = data.windows_loader(
         train_set, val_set, frame_columns, train.data.measure, cfg.windows, cfg.seed
     )
@@ -42,6 +45,31 @@ def get_latents(cfg, train, model, path):
     )
     lat.save(path)
     return lat
+
+
+def stamping(cfg, train, leaves=None):
+    return pairs.stamping(
+        OmegaConf.to_container(train.data, resolve=True), train.seed, cfg.tag_size, leaves
+    )
+
+
+def measure_pairs(cfg, train, model, ds):
+    """Pair cosines: dataset frames stamped with the tag's colours, or the t_position scenes."""
+    if cfg.pairs.suite == "t_position":
+        frames, tag = stamping(cfg, train, stimuli.GOAL_LEAVES)
+        return pairs.measure_t_position(model, frames, cfg.pairs.n, tag, cfg.device, cfg.seed)
+    frames, tag = stamping(cfg, train)
+    sample = pairs.sample_frames(frames, ds, cfg.pairs.n, cfg.seed, cfg.device)
+    return pairs.measure(model, sample, tag, cfg.seed)
+
+
+def measure_colour(cfg, train, model, ds):
+    """Colour probe on dataset frames, each stamped with its own colour."""
+    frames, tag = stamping(cfg, train)
+    sample = pairs.sample_frames(frames, ds, cfg.colour.n, cfg.seed, cfg.device)
+    return pairs.measure_colour(
+        model, sample, tag, cfg.colour.kinds, cfg.colour.train_fraction, cfg.seed
+    )
 
 
 @hydra.main(version_base=None, config_path="../configs", config_name="measure")
@@ -61,10 +89,15 @@ def run(cfg):
     latents_path = run_dir / f"{stem}_latents.pt"
 
     start = time.perf_counter()
-    lat = get_latents(cfg, train, model, latents_path)
+    train_set, val_set = build(train.data, train.seed)
+    lat = get_latents(cfg, train, model, latents_path, train_set, val_set)
     metrics = suite.run(lat, OmegaConf.to_container(cfg.metrics, resolve=True))
     if cfg.get("pred_copy"):
         metrics["pred_copy"] = predictor.measure(model, lat, **cfg.pred_copy)
+    if cfg.get("pairs"):
+        metrics["pairs"] = measure_pairs(cfg, train, model, train_set.dataset)
+    if cfg.get("colour"):
+        metrics["colour_probe"] = measure_colour(cfg, train, model, train_set.dataset)
     seconds = time.perf_counter() - start
 
     print(json.dumps(metrics, indent=1))
