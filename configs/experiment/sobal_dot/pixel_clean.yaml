@@ -1,0 +1,5 @@
+# @package _global_
+# The pixel twin: next-frame pixel error of the decoded prediction, on clean frames.
+defaults:
+  - sobal_dot/base
+  - override /loss: pixel

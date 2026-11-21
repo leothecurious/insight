@@ -22,6 +22,7 @@ img_size: 224
 patch_size: 14
 encoder_scale: tiny
 embed_dim: 192
+decoder_size: ${img_size} # side of the frames pixel objectives decode to; their targets are area-resized to it
 
 wm:
   history_size: 3

@@ -1,0 +1,5 @@
+# @package _global_
+# The latent-augmented twin: pixel error plus lambda times a stop-gradient latent error, on clean frames.
+defaults:
+  - sobal_dot/base
+  - override /loss: latent_twin

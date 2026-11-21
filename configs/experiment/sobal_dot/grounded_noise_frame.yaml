@@ -1,0 +1,6 @@
+# @package _global_
+# Grounded: LeWM plus beta times the pixel error, with uniform noise redrawn every frame.
+defaults:
+  - sobal_dot/base
+  - /nuisance: noise_frame
+  - override /loss: grounded

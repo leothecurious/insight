@@ -1,0 +1,13 @@
+forward:
+  _target_: insight.losses.pixel.pixel
+  _partial_: true
+  history_size: ${wm.history_size}
+  num_preds: ${wm.num_preds}
+sigreg:
+  knots: 17
+  num_proj: 1024
+modules:
+  decoder:
+    _target_: stable_pretraining.backbone.CNNImageDecoder
+    embed_dim: ${embed_dim}
+    img_size: ${decoder_size}
