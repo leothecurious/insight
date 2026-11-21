@@ -17,8 +17,9 @@ from omegaconf import OmegaConf, open_dict
 from stable_pretraining.callbacks.queue import OnlineQueue
 from stable_worldmodel.wm.loss import SIGReg
 
-from insight.callbacks import SaveWeights
+from insight.callbacks import PairCosines, SaveWeights
 from insight.data.build import build
+from insight.metrics import pairs
 
 ROOT = Path(__file__).resolve().parents[1]
 
@@ -110,6 +111,13 @@ def run(cfg):
             cache_dir=cfg.paths.runs,
         ),
     ]
+    if cfg.pairs:
+        frames, tag = pairs.stamping(
+            OmegaConf.to_container(cfg.data, resolve=True), cfg.seed, cfg.pairs.tag_size
+        )
+        device = "cuda" if cfg.trainer.accelerator == "gpu" else "cpu"
+        sample = pairs.sample_frames(frames, train_set.dataset, cfg.pairs.n, cfg.seed, device)
+        callbacks.append(PairCosines(sample, tag, cfg.pairs.every_n_steps, cfg.seed))
     if cfg.monitor.enabled:
         # RankMe reads this queue; declared here only to turn off its per-step fill logging.
         queue = OnlineQueue(

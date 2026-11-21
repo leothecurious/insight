@@ -17,8 +17,6 @@ import torch
 from omegaconf import OmegaConf
 
 from insight.data.build import build
-from insight.data.frames import Frames
-from insight.data.nuisance import CornerSquare
 from insight.metrics import data, pairs, predictor, stimuli, suite
 from insight.metrics.latents import Latents, extract
 
@@ -50,15 +48,9 @@ def get_latents(cfg, train, model, path, train_set, val_set):
 
 
 def stamping(cfg, train, leaves=None):
-    """The ``Frames`` of the run's spec without its overlays, plus ``leaves``, and the tag to stamp.
-
-    The tag has the run's tag size when the run has one, and the run's seed.
-    """
-    spec = OmegaConf.to_container(train.data.frames, resolve=True)
-    run_tag = spec.pop("nuisance", {}).get("tag", {})
-    spec["leaves"] |= leaves or {}
-    tag = CornerSquare(run_tag.get("size", cfg.tag_size), "episode", train.seed)
-    return Frames(spec, OmegaConf.to_container(train.data.ids)), tag
+    return pairs.stamping(
+        OmegaConf.to_container(train.data, resolve=True), train.seed, cfg.tag_size, leaves
+    )
 
 
 def measure_pairs(cfg, train, model, ds):

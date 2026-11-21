@@ -25,6 +25,8 @@ import torch.nn.functional as F
 from stable_pretraining.data import dataset_stats
 from torchvision.transforms.v2.functional import normalize
 
+from insight.data.frames import Frames
+from insight.data.nuisance import CornerSquare
 from insight.metrics import probes, stimuli
 
 REPS = ("backbone", "projection")
@@ -36,6 +38,18 @@ def cyclic_derangement(n, rng):
     partner = np.empty(n, dtype=np.int64)
     partner[order] = np.roll(order, -1)
     return partner
+
+
+def stamping(data, seed, tag_size, leaves=None):
+    """The ``Frames`` of a resolved ``data`` config without its overlays, plus ``leaves``, and the tag to stamp.
+
+    The tag has the config's own tag size when it has one, else ``tag_size``, and the run's ``seed``.
+    """
+    spec = dict(data["frames"])
+    run_tag = spec.pop("nuisance", {}).get("tag", {})
+    spec["leaves"] = {**spec["leaves"], **(leaves or {})}
+    tag = CornerSquare(run_tag.get("size", tag_size), "episode", seed)
+    return Frames(spec, data["ids"]), tag
 
 
 def render(frames, columns, device, chunk=512):
