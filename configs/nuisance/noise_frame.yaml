@@ -1,0 +1,6 @@
+# @package data.frames.nuisance
+noise:
+  _target_: insight.data.nuisance.UniformNoise
+  alpha: 1.5
+  vary: frame
+  seed: ${seed}

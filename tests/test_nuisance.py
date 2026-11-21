@@ -16,6 +16,15 @@ def corner_colours(pixels):
     return ((pixels * std + mean)[..., 0, 0] * 255).round().to(torch.uint8)
 
 
+def uint8_frames(pixels):
+    """Frames of the normalised ``pixels`` as uint8 ``(B, T, H, W)``, read from the first channel."""
+    mean, std = (
+        torch.tensor(dataset_stats.ImageNet[k], device=pixels.device).view(1, 1, 3, 1, 1)
+        for k in ("mean", "std")
+    )
+    return ((pixels * std + mean)[:, :, 0] * 255).round().to(torch.uint8)
+
+
 def render(tmp_path, monkeypatch, overlay=None):
     """Draw every clip of the toy dot set, under the ``nuisance`` config ``overlay`` if given."""
     train = build_toy_dot(tmp_path, monkeypatch, [f"+nuisance={overlay}"] if overlay else [])
@@ -48,7 +57,7 @@ def test_frame_tag_follows_the_dataset_row(tmp_path, monkeypatch):
     assert len(set(by_row.values())) == len(by_row)
 
 
-@pytest.mark.parametrize("overlay", ["tag_episode", "tag_frame"])
+@pytest.mark.parametrize("overlay", ["tag_episode", "tag_frame", "noise_episode", "noise_frame"])
 def test_overlays_do_not_depend_on_the_batch(tmp_path, monkeypatch, overlay):
     """Drawing clips one at a time must give the frames of drawing them together."""
     batch, train = render(tmp_path, monkeypatch, overlay)
@@ -56,3 +65,18 @@ def test_overlays_do_not_depend_on_the_batch(tmp_path, monkeypatch, overlay):
     for i in (0, 7, len(train) - 1):
         single = train.gpu_transform({k: v[i : i + 1].to(DEVICE) for k, v in raw.items()})
         assert (single["pixels"][0] == batch["pixels"][i]).all()
+
+
+@pytest.mark.parametrize("vary", ["episode", "frame"])
+def test_noise_is_fixed_per_episode_or_redrawn_per_frame(tmp_path, monkeypatch, vary):
+    """Recover the noise Z from the noisy and the clean render of the same rows. Z drawn per clip position
+    instead of per episode would differ between the frames of an episode-noise clip; a pattern shared by
+    all pixels or all episodes would not look uniform."""
+    alpha = 1.5
+    noisy = uint8_frames(render(tmp_path, monkeypatch, f"noise_{vary}")[0]["pixels"])
+    clean = uint8_frames(render(tmp_path / "clean", monkeypatch)[0]["pixels"])
+    z = (noisy.float() * (1 + alpha) - clean.float()) / (alpha * 255)
+    within = (z[:, 1] - z[:, 0]).abs()
+    assert within.mean() > 0.1 if vary == "frame" else within.max() < 0.01
+    assert (z[0, 0] - z[-1, 0]).abs().mean() > 0.1
+    assert 0.4 < z.mean() < 0.6
