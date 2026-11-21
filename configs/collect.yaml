@@ -1,0 +1,17 @@
+defaults:
+  - _self_
+  - data: dot
+  - policy: von_mises
+  - launcher: local
+  - optional local: local
+
+name: ??? # file name without .h5
+sequences: ???
+seed: 0 # a file of its own seed per name, so train, val, probe and test never share sequences
+first_episode: 0 # id of the first episode; files that share a run seed need disjoint ranges (noise is keyed by id)
+steps: 16 # actions per sequence; a sequence has steps + 1 rows
+chunk: 10000 # environments stepped at once
+device: cpu
+
+paths:
+  data: null # holds datasets/

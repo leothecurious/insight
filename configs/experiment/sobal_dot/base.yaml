@@ -1,0 +1,13 @@
+# @package _global_
+# The dot of Sobal et al. on LeWM's encoder, 4 px patches on 32 px frames, one context frame and 10 epochs of
+# 11,250 steps (the 90,000 training sequences in 16 clips each, at batch 128).
+defaults:
+  - override /data: dot
+
+img_size: 32
+patch_size: 4
+wm:
+  history_size: 1
+trainer:
+  max_epochs: 10
+pairs: null

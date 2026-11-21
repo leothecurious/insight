@@ -30,7 +30,7 @@ Library versions are pinned to exact commits in `pyproject.toml`; `uv.lock` fixe
 
 ## Data
 
-Datasets and checkpoints live under `$STABLEWM_HOME` (swm's default, `~/.stable_worldmodel/`). The LeWM releases (PushT, TwoRoom) are on [HuggingFace](https://huggingface.co/collections/quentinll/lewm); decompress with `tar --zstd -xvf archive.tar.zst`.
+Datasets and checkpoints live under `$STABLEWM_HOME` (swm's default, `~/.stable_worldmodel/`). The LeWM releases (PushT, TwoRoom) are on [HuggingFace](https://huggingface.co/collections/quentinll/lewm); decompress with `tar --zstd -xvf archive.tar.zst`. The moving dot is recorded locally, in seconds: `uv run scripts/collect.py name=dot_train sequences=90000 seed=0`, then `dot_val`, `dot_probe` and `dot_test` from seeds and `first_episode` ranges of their own (see `configs/collect.yaml`).
 
 ## Layout
 

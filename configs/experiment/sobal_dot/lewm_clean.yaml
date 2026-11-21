@@ -1,0 +1,4 @@
+# @package _global_
+# LeWM: latent prediction and SIGReg, on clean frames.
+defaults:
+  - sobal_dot/base
