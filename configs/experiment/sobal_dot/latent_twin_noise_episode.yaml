@@ -1,5 +1,5 @@
 # @package _global_
-# The latent-augmented twin: pixel error plus lambda times a stop-gradient latent error, with uniform noise fixed within an episode.
+# Compared with latent_twin_clean: uniform noise fixed within an episode.
 defaults:
   - sobal_dot/base
   - /nuisance: noise_episode

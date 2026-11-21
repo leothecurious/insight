@@ -1,5 +1,5 @@
 # @package _global_
-# The pixel twin: next-frame pixel error of the decoded prediction, on clean frames.
+# Compared with lewm_clean: the pixel twin's objective, the next-frame pixel error of the decoded prediction.
 defaults:
   - sobal_dot/base
   - override /loss: pixel

@@ -1,5 +1,5 @@
 # @package _global_
-# LeWM: latent prediction and SIGReg, with uniform noise fixed within an episode.
+# Compared with lewm_clean: uniform noise fixed within an episode.
 defaults:
   - sobal_dot/base
   - /nuisance: noise_episode

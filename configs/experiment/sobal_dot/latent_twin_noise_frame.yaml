@@ -1,5 +1,5 @@
 # @package _global_
-# The latent-augmented twin: pixel error plus lambda times a stop-gradient latent error, with uniform noise redrawn every frame.
+# Compared with latent_twin_clean: uniform noise redrawn every frame.
 defaults:
   - sobal_dot/base
   - /nuisance: noise_frame

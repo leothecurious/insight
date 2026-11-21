@@ -1,5 +1,5 @@
 # @package _global_
-# The pixel twin: next-frame pixel error of the decoded prediction, with uniform noise redrawn every frame.
+# Compared with pixel_clean: uniform noise redrawn every frame.
 defaults:
   - sobal_dot/base
   - /nuisance: noise_frame

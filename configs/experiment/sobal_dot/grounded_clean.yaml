@@ -1,5 +1,5 @@
 # @package _global_
-# Grounded: LeWM plus beta times the pixel error, on clean frames.
+# Compared with lewm_clean: the grounded objective, LeWM's plus beta times the pixel error.
 defaults:
   - sobal_dot/base
   - override /loss: grounded
