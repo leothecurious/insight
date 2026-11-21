@@ -1,0 +1,15 @@
+# @package _global_
+# Sobal et al.'s protocol: whole 17-frame episodes of the probe file fit the readout and those of the
+# test file score it. rollout_probe reads the position from predictions made from the first frame alone.
+windows:
+  frames: 17
+  min_frames: 17
+  n_train: 10000
+  n_val: 10000
+  rollout: true
+metrics:
+  - {name: rollout_probe}
+  - {name: state_probe, groups: [state], kinds: [linear, mlp], windows: [1]}
+  - {name: rank_spectrum, frame: null}
+pairs: null
+colour: null

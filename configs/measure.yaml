@@ -26,6 +26,7 @@ windows:
   n_val: 200
   start: episode_start # episode_start | any_start
   precision: fp32 # fp32 | bf16 | fp16
+  rollout: false # also predict each window from its first frame and its actions (the rollout_probe metric)
   batch_size: 16
   num_workers: 0
 

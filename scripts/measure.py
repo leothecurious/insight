@@ -33,7 +33,13 @@ def get_latents(cfg, train, model, path, train_set, val_set):
         train_set, val_set, frame_columns, train.data.measure, cfg.windows, cfg.seed
     )
     targets = train.data.measure.targets
-    out = extract(model, loader, train_set.dataset.gpu_transform, cfg.windows.precision)
+    out = extract(
+        model,
+        loader,
+        data.side(train_set)[0].gpu_transform,
+        cfg.windows.precision,
+        cfg.windows.rollout,
+    )
     lat = Latents(
         **out,
         target=torch.from_numpy(target),
@@ -89,15 +95,15 @@ def run(cfg):
     latents_path = run_dir / f"{stem}_latents.pt"
 
     start = time.perf_counter()
-    train_set, val_set = build(train.data, train.seed)
+    train_set, val_set = build(train.data, train.seed, train.data.measure.get("files"))
     lat = get_latents(cfg, train, model, latents_path, train_set, val_set)
     metrics = suite.run(lat, OmegaConf.to_container(cfg.metrics, resolve=True))
     if cfg.get("pred_copy"):
         metrics["pred_copy"] = predictor.measure(model, lat, **cfg.pred_copy)
     if cfg.get("pairs"):
-        metrics["pairs"] = measure_pairs(cfg, train, model, train_set.dataset)
+        metrics["pairs"] = measure_pairs(cfg, train, model, data.side(train_set)[0])
     if cfg.get("colour"):
-        metrics["colour_probe"] = measure_colour(cfg, train, model, train_set.dataset)
+        metrics["colour_probe"] = measure_colour(cfg, train, model, data.side(train_set)[0])
     seconds = time.perf_counter() - start
 
     print(json.dumps(metrics, indent=1))

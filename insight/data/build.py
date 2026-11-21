@@ -59,11 +59,20 @@ def scalers(cfg, seed):
     return fit_scalers(cfg, dataset, mask)
 
 
-def build(cfg, seed):
-    """Return ``(train, val)`` for a ``data`` config; ``train.get_dim("action")`` is the action width."""
+def build(cfg, seed, files=None):
+    """Return ``(train, val)`` for a ``data`` config; ``train.get_dim("action")`` is the action width.
+
+    ``files`` names two other files of the same dataset that replace the two sides (the probe and test
+    files of measure). They are drawn and normalised like the training data, with scalers fitted on the
+    training file.
+    """
     cfg = OmegaConf.to_container(cfg, resolve=True)
     dataset, train, val, mask = _split(cfg, seed)
-    datasets = [dataset] if isinstance(val, spt.data.Subset) else [dataset, val]
+    if files:
+        train, val = (swm.data.load_dataset(**{**cfg["dataset"], "name": name}) for name in files)
+        datasets = [train, val]
+    else:
+        datasets = [dataset] if isinstance(val, spt.data.Subset) else [dataset, val]
 
     # Statistics come from the training episodes only.
     normalizers = [
