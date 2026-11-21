@@ -14,7 +14,7 @@ SEQUENCES, STEPS = 8, 5
 def build_toy_dot(tmp_path, monkeypatch, overrides=()):
     """Collect a tiny train and validation set of the moving dot and return ``build``'s training set.
 
-    The files go through ``collect``, ``HDF5Writer`` and ``swm.load_dataset`` like a real dataset.
+    The files go through ``collect`` (h5py) and ``swm.load_dataset`` like a real dataset.
     """
     monkeypatch.setenv("STABLEWM_HOME", str(tmp_path))
     with initialize_config_dir(str(CONFIGS), version_base=None):
