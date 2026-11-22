@@ -2,9 +2,7 @@ import pytest
 import torch
 from stable_pretraining.data import dataset_stats
 from torch.utils.data import DataLoader
-from toy import build_toy_dot
-
-DEVICE = "cuda" if torch.cuda.is_available() else "cpu"
+from toy import DEVICE, build_toy_dot, draw, rgb
 
 
 def corner_colours(pixels):
@@ -18,20 +16,13 @@ def corner_colours(pixels):
 
 def uint8_frames(pixels):
     """Frames of the normalised ``pixels`` as uint8 ``(B, T, H, W)``, read from the first channel."""
-    mean, std = (
-        torch.tensor(dataset_stats.ImageNet[k], device=pixels.device).view(1, 1, 3, 1, 1)
-        for k in ("mean", "std")
-    )
-    return ((pixels * std + mean)[:, :, 0] * 255).round().to(torch.uint8)
+    return (rgb(pixels)[:, :, 0] * 255).round().to(torch.uint8)
 
 
 def render(tmp_path, monkeypatch, overlay=None):
     """Draw every clip of the toy dot set, under the ``nuisance`` config ``overlay`` if given."""
     train = build_toy_dot(tmp_path, monkeypatch, [f"+nuisance={overlay}"] if overlay else [])
-    batch = next(iter(DataLoader(train, batch_size=len(train))))
-    gpu_transform = train.gpu_transform.to(DEVICE)
-    batch = gpu_transform({k: v.to(DEVICE) for k, v in batch.items()})
-    return batch, train
+    return draw(train), train
 
 
 def test_episode_tag_is_constant_within_an_episode(tmp_path, monkeypatch):
