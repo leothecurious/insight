@@ -2,9 +2,7 @@ forward:
   _target_: insight.losses.reconstruction.reconstruction
   _partial_: true
   history_size: ${wm.history_size}
-sigreg:
-  knots: 17
-  num_proj: 1024
+sigreg: {}
 modules:
   decoder:
     _target_: stable_pretraining.backbone.CNNImageDecoder
