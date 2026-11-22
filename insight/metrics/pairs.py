@@ -122,7 +122,7 @@ def stamped(frames, tag, ids):
     return tag(frames.clone(), torch.as_tensor(ids))
 
 
-def colour_probe(z, colours, kinds=("ridge", "mlp"), train_fraction=0.8, seed=0):
+def colour_probe(z, colours, kinds, train_fraction, seed):
     """Decode the stamped colour from latents ``z`` (n, d); mean of the r, g, b errors.
 
     Colours are in 0-255. The error ratio eps compares each probe with an MLP from the true
@@ -148,7 +148,7 @@ def colour_probe(z, colours, kinds=("ridge", "mlp"), train_fraction=0.8, seed=0)
     return out
 
 
-def measure_colour(model, frames, tag, kinds=("ridge", "mlp"), train_fraction=0.8, seed=0):
+def measure_colour(model, frames, tag, kinds, train_fraction, seed):
     """Colour probe of ``model`` on ``frames``, each stamped with a colour of its own from ``tag``."""
     ids = np.arange(len(frames))
     own = encode(model, stamped(frames, tag, ids))
@@ -156,7 +156,7 @@ def measure_colour(model, frames, tag, kinds=("ridge", "mlp"), train_fraction=0.
     return {rep: colour_probe(own[rep], colours, kinds, train_fraction, seed) for rep in REPS}
 
 
-def measure(model, frames, tag, seed=0):
+def measure(model, frames, tag, seed):
     """Pair cosines of ``model`` on ``frames`` stamped by ``tag``."""
     n = len(frames)
     partner = cyclic_derangement(n, np.random.default_rng(seed))
@@ -165,7 +165,7 @@ def measure(model, frames, tag, seed=0):
     return {rep: pair_cosines(own[rep], swap[rep], partner) for rep in REPS}
 
 
-def measure_t_position(model, frames, n, tag, device, seed=0):
+def measure_t_position(model, frames, n, tag, device, seed):
     """Pair cosines with the goal outline as the tag and the block pose as the content.
 
     The t_position suite of Enigma-Incorporated/The-Obsessed-Encoder@37819425. ``n`` scenes carry a

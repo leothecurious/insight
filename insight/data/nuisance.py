@@ -46,7 +46,7 @@ class CornerSquare:
     past) or ``frame`` (a new colour on every dataset row, which the past cannot predict).
     """
 
-    def __init__(self, size=5, vary="episode", seed=0):
+    def __init__(self, size, vary, seed):
         assert vary in ("episode", "frame"), vary
         self.size, self.vary, self.seed = size, vary, seed
 
