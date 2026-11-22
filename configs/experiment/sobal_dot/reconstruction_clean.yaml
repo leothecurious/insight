@@ -1,0 +1,9 @@
+# @package _global_
+# Compared with pixel_clean: Sobal et al.'s reconstruction, the pixel error of every frame of a 17-frame window
+# decoded from the open-loop rollout of its first frame. One window per episode: 703 steps an epoch at batch 128.
+defaults:
+  - sobal_dot/base
+  - override /loss: reconstruction
+
+wm:
+  num_preds: 16

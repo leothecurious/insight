@@ -2,10 +2,11 @@ from types import SimpleNamespace
 
 import pytest
 import torch
+from stable_worldmodel.wm.lewm import LeWM
 from stable_worldmodel.wm.loss import SIGReg
 
 from insight.losses.common import grad_shares
-from insight.losses.pixel import grounded, latent_twin, pixel
+from insight.losses.pixel import grounded, latent_twin, pixel, reconstruction
 
 B, T, D = 6, 2, 4
 
@@ -51,6 +52,31 @@ def test_pixel_losses_route_gradients_as_specified(loss, weights, target_trained
     assert (grads[0][:, 1].abs().sum() > 0) == target_trained
     assert all(g.abs().sum() > 0 for g in grads[1:])  # every objective trains the decoder
     assert output["sigreg_loss"].requires_grad == sigreg_trained
+
+
+def test_reconstruction_trains_the_encoder_through_the_rollout_of_the_first_frame():
+    """Only the first frame's embedding enters the rollout, and it stays in the graph. LeWM's rollout
+    detaches an embedding it encodes itself, which would leave the encoder untrained, and a rollout fed
+    later embeddings would be teacher-forced; both would train without error."""
+    T = 5
+    first = torch.randn(B, 1, D, requires_grad=True)
+    rest = torch.randn(B, T - 1, D, requires_grad=True)
+    batch = {"pixels": torch.randn(B, T, 3, 2, 2), "action": torch.randn(B, T, D)}
+    module = stub(None)
+    model = module.model
+    model.encode = lambda info: {
+        **info,
+        "emb": torch.cat([first, rest], 1)[:, : info["pixels"].shape[1]],
+        "act_emb": info.get("action"),
+    }
+    model.predictor = SimpleNamespace(num_frames=1)
+    model.action_encoder = torch.nn.Identity()
+    model.rollout = lambda info, actions: LeWM.rollout(model, info, actions)
+    output = reconstruction(module, batch, "fit", history_size=1)
+
+    grad_first, grad_rest = torch.autograd.grad(output["loss"], [first, rest], allow_unused=True)
+    assert grad_first.abs().sum() > 0
+    assert grad_rest is None
 
 
 def test_grad_shares_split_the_gradient_norm_at_the_embedding():
