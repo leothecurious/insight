@@ -66,7 +66,7 @@ def test_reconstruction_trains_the_encoder_through_the_rollout_of_the_first_fram
     model = module.model
     model.encode = lambda info: {
         **info,
-        "emb": torch.cat([first, rest], 1)[:, : info["pixels"].shape[1]],
+        "emb": first if info["pixels"].shape[1] == 1 else torch.cat([first, rest], 1),
         "act_emb": info.get("action"),
     }
     model.predictor = SimpleNamespace(num_frames=1)
