@@ -100,10 +100,11 @@ def run(cfg):
     metrics = suite.run(lat, OmegaConf.to_container(cfg.metrics, resolve=True))
     if cfg.get("pred_copy"):
         metrics["pred_copy"] = predictor.measure(model, lat, **cfg.pred_copy)
+    dataset = data.side(train_set)[0]
     if cfg.get("pairs"):
-        metrics["pairs"] = measure_pairs(cfg, train, model, data.side(train_set)[0])
+        metrics["pairs"] = measure_pairs(cfg, train, model, dataset)
     if cfg.get("colour"):
-        metrics["colour_probe"] = measure_colour(cfg, train, model, data.side(train_set)[0])
+        metrics["colour_probe"] = measure_colour(cfg, train, model, dataset)
     seconds = time.perf_counter() - start
 
     print(json.dumps(metrics, indent=1))

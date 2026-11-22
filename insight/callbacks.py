@@ -13,7 +13,7 @@ class SaveWeights(Callback):
     ``weights_step_N.pt`` after each optimizer step N in ``steps``.
     """
 
-    def __init__(self, run, configs, epochs, cache_dir, steps=()):
+    def __init__(self, run, configs, epochs, cache_dir, steps):
         super().__init__()
         self.run, self.configs, self.epochs, self.cache_dir = run, configs, epochs, cache_dir
         self.steps = set(steps or ())
