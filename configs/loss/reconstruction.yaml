@@ -10,3 +10,4 @@ modules:
     _target_: stable_pretraining.backbone.CNNImageDecoder
     embed_dim: ${embed_dim}
     img_size: ${decoder_size}
+    start_size: ${decoder_start}
