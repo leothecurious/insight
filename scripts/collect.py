@@ -19,7 +19,6 @@ def run(cfg):
     collect(
         path,
         Frames(cfg.data.frames, cfg.data.ids),
-        cfg.data.ids,
         hydra.utils.instantiate(cfg.policy),
         cfg.sequences,
         cfg.steps,

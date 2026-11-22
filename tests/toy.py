@@ -23,5 +23,5 @@ def build_toy_dot(tmp_path, monkeypatch, overrides=()):
     frames = Frames(cfg.data.frames, cfg.data.ids)
     for i, name in enumerate((cfg.data.dataset.name, cfg.data.split.val.name)):
         path = tmp_path / "datasets" / name
-        collect(path, frames, cfg.data.ids, policy, SEQUENCES, STEPS, i, i * SEQUENCES, SEQUENCES)
+        collect(path, frames, policy, SEQUENCES, STEPS, i, i * SEQUENCES, SEQUENCES)
     return build(cfg.data, seed=0)[0]

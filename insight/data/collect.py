@@ -15,14 +15,12 @@ import numpy as np
 import stable_envs as snv
 import torch
 
-from insight import envs  # noqa: F401  registers the environments
 
-
-def collect(path, frames, ids, policy, sequences, steps, seed, first_episode, chunk, device="cpu"):
+def collect(path, frames, policy, sequences, steps, seed, first_episode, chunk, device="cpu"):
     """Write ``sequences`` episodes of ``steps + 1`` rows to ``path``.
 
     Row ``t`` of an episode holds the State before action ``t``; the last row's action leaves no next
-    row and is NaN. Episodes are numbered from ``first_episode`` in the ``ids`` columns. Noise overlays
+    row and is NaN. Episodes are numbered from ``first_episode`` in the ``frames.ids`` columns. Noise overlays
     are keyed by episode and step, so files that share a run seed need disjoint episode ids.
     """
     assert sequences % chunk == 0, "sequences must be a multiple of chunk"
@@ -57,8 +55,8 @@ def collect(path, frames, ids, policy, sequences, steps, seed, first_episode, ch
                 1,
             )
             episode = first_episode + first + np.arange(chunk, dtype=np.int32)
-            columns[ids["episode"]] = np.repeat(episode[:, None], length, 1)
-            columns[ids["step"]] = np.tile(np.arange(length, dtype=np.int32), (chunk, 1))
+            columns[frames.ids["episode"]] = np.repeat(episode[:, None], length, 1)
+            columns[frames.ids["step"]] = np.tile(np.arange(length, dtype=np.int32), (chunk, 1))
             for name, x in columns.items():
                 if name not in f:
                     f.create_dataset(name, shape=(sequences * length, *x.shape[2:]), dtype=x.dtype)
