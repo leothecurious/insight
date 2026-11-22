@@ -44,7 +44,7 @@ class PairCosines(Callback):
     """Log the backbone's pair cosines as ``val/pair/<pairing>`` every ``every_n_steps`` steps.
 
     ``frames`` are uint8 dataset frames drawn once (``pairs.sample_frames``) and ``tag`` stamps them
-    (``pairs.stamping``). The backbone read is the CLS token, as in Enigma's Fig. 9.
+    (``pairs.stamping``).
     """
 
     def __init__(self, frames, tag, every_n_steps, seed):

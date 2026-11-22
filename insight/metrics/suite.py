@@ -184,17 +184,11 @@ METRICS = {f.__name__: f for f in (state_probe, rollout_probe, reverse_probe, ra
 
 
 def run(lat, metrics):
-    """Evaluate each configured metric.
-
-    ``metrics`` is a list of ``{name, fn?, **params}``; ``fn`` picks the
-    function (default: ``name``), so one function can run under several
-    names with different params.
-    """
+    """Evaluate each configured metric; ``metrics`` is a list of ``{name, **params}``."""
     results = {}
     for entry in metrics:
         params = dict(entry)
         name = params.pop("name")
-        fn = METRICS[params.pop("fn", name)]
         print(f"metric {name}", flush=True)
-        results[name] = fn(lat, **params)
+        results[name] = METRICS[name](lat, **params)
     return results

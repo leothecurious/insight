@@ -53,10 +53,7 @@ class Frames(nn.Module):
 
     @torch.no_grad()
     def draw(self, batch):
-        """Return ``(B, T, H, W, 3)`` uint8 frames of the ``(B, T, D)`` columns of ``batch``.
-
-        With nuisance overlays, ``batch`` also holds the ``(B, T)`` id columns.
-        """
+        """Return ``(B, T, H, W, 3)`` uint8 frames of the ``(B, T, D)`` columns of ``batch``."""
         column = self.leaves[0][1]
         b, t = batch[column].shape[:2]
         env = self._env_on(batch[column].device)
