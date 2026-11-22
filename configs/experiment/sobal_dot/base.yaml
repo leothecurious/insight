@@ -9,7 +9,6 @@ defaults:
 
 img_size: 28
 patch_size: 4
-decoder_start: 7
 wm:
   history_size: 1
 trainer:
