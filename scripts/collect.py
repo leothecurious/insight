@@ -1,4 +1,4 @@
-"""Record a dataset of state rows: ``uv run scripts/collect.py data=dot name=dot_train sequences=90000 seed=0``.
+"""Record a dataset of state rows: ``uv run scripts/collect.py data=dot name=dot1m_train sequences=1000000 seed=10``.
 
 The frame spec of the ``data`` config names the environment and maps its State to dataset columns; the
 ``policy`` group supplies the actions. The file is written to ``<paths.data>/datasets/<name>.h5``.

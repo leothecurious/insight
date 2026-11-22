@@ -1,13 +1,20 @@
 # @package _global_
-# The dot of Sobal et al. on LeWM's encoder, 4 px patches on 32 px frames, one context frame and 10 epochs of
-# 11,250 steps (the 90,000 training sequences in 16 clips each, at batch 128).
+# The dot of Sobal et al. on LeWM's encoder and predictor, with the data and budget of their code
+# (vladisai/JEPA_SSL_NeurIPS_2022 at 03eb1730): about 1M 17-frame sequences per run, drawn fresh each of 100
+# epochs of 9,984 (data/single.py:85-87, train.py:139), on 28 px frames (data/single.py:30). Here 1M
+# recorded sequences are seen once, in 125,000 steps of 16 transitions at batch 128; 4 px patches tile the
+# 28 px frame. Weights are also kept at half the steps.
 defaults:
   - override /data: dot
 
-img_size: 32
+img_size: 28
 patch_size: 4
+decoder_start: 7
 wm:
   history_size: 1
 trainer:
-  max_epochs: 10
+  max_epochs: 1
+checkpoint:
+  epochs: [1]
+  steps: [62500]
 pairs: null

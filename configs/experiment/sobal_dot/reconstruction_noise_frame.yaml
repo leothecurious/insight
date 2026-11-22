@@ -7,3 +7,5 @@ defaults:
 
 wm:
   num_preds: 16
+checkpoint:
+  steps: [3906] # half of the 7,812 steps: one 17-frame window per sequence

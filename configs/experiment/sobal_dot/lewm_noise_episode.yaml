@@ -1,5 +1,12 @@
 # @package _global_
-# Compared with lewm_clean: uniform noise fixed within an episode.
+# Compared with lewm_clean: uniform noise fixed within an episode, at the 1.25 of their
+# fixed-noise config (reproduce_configs/sweep_fixed_uniform.(1.25).rssm.best.yaml:18).
 defaults:
   - sobal_dot/base
   - /nuisance: noise_episode
+
+data:
+  frames:
+    nuisance:
+      noise:
+        alpha: 1.25

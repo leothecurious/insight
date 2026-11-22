@@ -1,14 +1,14 @@
 # Moving dot (insight.envs.moving_dot) recorded by scripts/collect.py; see experiment/sobal_dot for the
 # model settings that go with it.
 dataset:
-  name: dot_train.h5
+  name: dot1m_train.h5
   frameskip: 1
   num_steps: ${eval:'${wm.history_size} + ${wm.num_preds}'}
   keys_to_load: [action, state, episode_idx, step_idx]
   keys_to_cache: ${.keys_to_load}
 ids: {episode: episode_idx, step: step_idx}
 normalize: [action]
-split: {val: {name: dot_val.h5}}
+split: {val: {name: dot1m_val.h5}}
 frames:
   env: MovingDot
   size: ${img_size}
@@ -17,7 +17,7 @@ frames:
 # Measure fits its probes on the windows of the first file and scores them on the second; the action
 # scalers still come from the training file.
 measure:
-  files: [dot_probe.h5, dot_test.h5]
+  files: [dot1m_probe.h5, dot1m_test.h5]
   columns:
     - {column: state, dim: 2} # dot_x, dot_y, in units of the frame's side
   targets:
