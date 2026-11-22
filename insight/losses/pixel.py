@@ -2,7 +2,7 @@
 
 ``pixel`` is the pixel twin: the decoded prediction's pixel error alone. ``grounded`` adds it to LeWM's
 objective with weight ``beta``. ``latent_twin`` adds a stop-gradient latent error to it with weight
-``lam``. ``reconstruction`` is the reconstruction baseline of Sobal et al., arXiv 2211.10831 (section 2 and
+``lam``. ``pixel_sigreg`` adds LeWM's SIGReg term to the pixel twin. ``reconstruction`` is the reconstruction baseline of Sobal et al., arXiv 2211.10831 (section 2 and
 appendix A, eq. 17): the rollout starts from the first frame's embedding alone, the predictor is unrolled on
 its own predictions over the window's actions, and every predicted embedding is decoded against its frame, with the
 gradient running back through the unroll. Every objective logs the latent terms; the ones that do not train
@@ -49,6 +49,18 @@ def latent_twin(self, batch, stage, *, history_size, num_preds, lam, grad_share_
     terms = {"latent": lam * output["pred_loss"], "pixel": output["pixel_loss"]}
     output["loss"] = sum(terms.values())
     return log_step(self, stage, output, emb, history_size, num_preds, terms, grad_share_every)
+
+
+def pixel_sigreg(self, batch, stage, *, history_size, num_preds, sigreg_weight):
+    """Pixel error plus ``sigreg_weight`` times SIGReg; the latent term is logged only."""
+    output, emb, pred_emb = encode_predict(self, batch, history_size, num_preds)
+
+    with torch.no_grad():
+        output["pred_loss"] = (pred_emb - emb[:, num_preds:]).pow(2).mean()
+    output["sigreg_loss"] = self.sigreg(emb.transpose(0, 1))
+    output["pixel_loss"] = pixel_error(self, pred_emb, batch, num_preds)
+    output["loss"] = output["pixel_loss"] + sigreg_weight * output["sigreg_loss"]
+    return log_step(self, stage, output, emb, history_size, num_preds)
 
 
 def reconstruction(self, batch, stage, *, history_size):

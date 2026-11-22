@@ -1,0 +1,6 @@
+# @package _global_
+# Compared with pixel_sigreg_clean: uniform noise fixed within an episode.
+defaults:
+  - sobal_dot/base
+  - /nuisance: noise_episode
+  - override /loss: pixel_sigreg

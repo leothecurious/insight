@@ -6,7 +6,7 @@ from stable_worldmodel.wm.lewm import LeWM
 from stable_worldmodel.wm.loss import SIGReg
 
 from insight.losses.common import grad_shares
-from insight.losses.pixel import grounded, latent_twin, pixel, reconstruction
+from insight.losses.pixel import grounded, latent_twin, pixel, pixel_sigreg, reconstruction
 
 B, T, D = 6, 2, 4
 
@@ -35,6 +35,7 @@ def stub(emb):
         (pixel, {}, False, False),
         (grounded, {"beta": 1.0, "sigreg_weight": 0.09, "grad_share_every": 1}, True, True),
         (latent_twin, {"lam": 1.0, "grad_share_every": 1}, False, False),
+        (pixel_sigreg, {"sigreg_weight": 0.09}, True, True),
     ],
 )
 def test_pixel_losses_route_gradients_as_specified(loss, weights, target_trained, sigreg_trained):

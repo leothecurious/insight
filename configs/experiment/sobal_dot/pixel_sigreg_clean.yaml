@@ -1,0 +1,6 @@
+# @package _global_
+# Compared with pixel_clean: adds LeWM's SIGReg at weight 0.09. Compared with lewm_clean: the decoded frame
+# replaces the latent target.
+defaults:
+  - sobal_dot/base
+  - override /loss: pixel_sigreg
