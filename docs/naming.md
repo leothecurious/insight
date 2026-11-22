@@ -17,7 +17,7 @@ Name only what the run is about. Hyperparameters tuned for a method, but not the
 | `lewm_pusht_ep10_s1` | LeWM on Push-T, 10 epochs, seed 1 |
 | `lewm_tworoom_nobn_ep10_s1` | LeWM on TwoRoom without the projector's BatchNorm |
 | `lewm_pusht_lr3e-4_ep10_s0` | LeWM on Push-T at learning rate 3e-4 |
-| `latenttwin_dot_noiseepisode_ep10_s1` | the latent twin on the moving dot with per-episode noise |
+| `lewm_dot_noiseepisode_ep1_s1` | LeWM on the moving dot with per-episode noise |
 
 W&B never reuses a deleted run id, so a run that is retrained after its W&B run was deleted takes a new name.
 
