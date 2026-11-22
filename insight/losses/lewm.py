@@ -1,11 +1,18 @@
 """LeWM objective as a stable-pretraining forward function (stable-worldmodel ``scripts/train/lewm.py``)."""
 
-from insight.losses.common import encode_predict, log_step
+import torch
+
+from insight.losses.common import log_step
 
 
 def lewm(self, batch, stage, *, history_size, num_preds, sigreg_weight):
     """Predict the next embeddings from ``history_size`` frames and regularise the embeddings with SIGReg."""
-    output, emb, pred_emb = encode_predict(self, batch, history_size, num_preds)
+    # NaN actions mark the start of an episode.
+    batch["action"] = torch.nan_to_num(batch["action"], 0.0)
+
+    output = self.model.encode(batch)
+    emb, act_emb = output["emb"], output["act_emb"]
+    pred_emb = self.model.predict(emb[:, :history_size], act_emb[:, :history_size])
 
     output["pred_loss"] = (pred_emb - emb[:, num_preds:]).pow(2).mean()
     output["sigreg_loss"] = self.sigreg(emb.transpose(0, 1))

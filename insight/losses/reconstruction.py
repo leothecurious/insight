@@ -7,8 +7,9 @@ config, beside the model.
 """
 
 import torch
+import torch.nn.functional as F
 
-from insight.losses.common import log_step, pixel_error
+from insight.losses.common import log_step
 
 
 def reconstruction(self, batch, stage, *, history_size):
@@ -27,6 +28,9 @@ def reconstruction(self, batch, stage, *, history_size):
     with torch.no_grad():
         output["pred_loss"] = (pred_emb - emb[:, 1:]).pow(2).mean()
         output["sigreg_loss"] = self.sigreg(emb.transpose(0, 1))
-    output["pixel_loss"] = pixel_error(self, pred_emb, batch, 1)
+    pred_pixels = self.decoder(pred_emb.flatten(0, 1)).float()
+    target = batch["pixels"][:, 1:].flatten(0, 1).float()
+    target = F.interpolate(target, size=pred_pixels.shape[-2:], mode="area")
+    output["pixel_loss"] = (pred_pixels - target).pow(2).mean()
     output["loss"] = output["pixel_loss"]
     return log_step(self, stage, output, emb, history_size, 1)
