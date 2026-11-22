@@ -1,6 +1,0 @@
-# @package _global_
-# Compared with latent_twin_clean: uniform noise redrawn every frame.
-defaults:
-  - sobal_dot/base
-  - /nuisance: noise_frame
-  - override /loss: latent_twin

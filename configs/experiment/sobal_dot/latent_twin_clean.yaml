@@ -1,5 +1,0 @@
-# @package _global_
-# Compared with lewm_clean: the latent twin's objective, the pixel error plus lambda times a stop-gradient latent error.
-defaults:
-  - sobal_dot/base
-  - override /loss: latent_twin

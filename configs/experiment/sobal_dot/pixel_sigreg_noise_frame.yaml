@@ -1,6 +1,0 @@
-# @package _global_
-# Compared with pixel_sigreg_clean: uniform noise redrawn every frame.
-defaults:
-  - sobal_dot/base
-  - /nuisance: noise_frame
-  - override /loss: pixel_sigreg

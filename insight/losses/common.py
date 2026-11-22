@@ -1,6 +1,6 @@
-"""Pieces the objectives share: encode and predict, the pixel error, gradient shares and logging.
+"""Pieces the objectives share: encode and predict, the pixel error and logging.
 
-Ported from le-wm PR #8 (``lewm_forward`` in ``train.py`` and ``grad_shares`` in ``module.py``).
+Ported from le-wm PR #8 (``lewm_forward`` in ``train.py``).
 """
 
 import torch
@@ -30,42 +30,14 @@ def pixel_error(self, pred_emb, batch, num_preds):
     return (pred_pixels - target).pow(2).mean()
 
 
-def grad_shares(terms, emb):
-    """Share of the gradient norm at ``emb`` held by each loss term in ``terms``.
-
-    ``terms`` maps names to scalar losses, already scaled by their weights. The shares sum to one.
-    """
-    norms = {}
-    for name, term in terms.items():
-        (grad,) = torch.autograd.grad(term, emb, retain_graph=True)
-        norms[name] = grad.detach().float().norm()
-    total = sum(norms.values()).clamp_min(torch.finfo(torch.float32).tiny)
-    return {name: norm / total for name, norm in norms.items()}
-
-
-def log_step(self, stage, output, emb, history_size, num_preds, terms=None, grad_share_every=None):
+def log_step(self, stage, output, emb, history_size, num_preds):
     """Log the losses of ``output`` and set the embeddings the training-time monitors read.
 
-    On validation it adds ``copy_loss``, the error of copying each context embedding forward. On
-    training steps that are a multiple of ``grad_share_every``, it logs the share of the gradient at
-    the embeddings held by each of the two prediction terms in ``terms`` (SIGReg's is left out).
+    On validation it adds ``copy_loss``, the error of copying each context embedding forward.
     """
     prefix = {"fit": "train", "validate": "val"}.get(stage, stage)
     if stage == "validate":
         output["copy_loss"] = (emb[:, :history_size] - emb[:, num_preds:]).detach().pow(2).mean()
-    elif terms and self.global_step % grad_share_every == 0:
-        for name, share in grad_shares(terms, emb).items():
-            self.log(
-                f"{prefix}/{name}_grad_share", share, on_step=False, on_epoch=True, sync_dist=True
-            )
-            self.log(
-                f"{prefix}/{name}_grad_share_min",
-                share,
-                on_step=False,
-                on_epoch=True,
-                reduce_fx="min",
-                sync_dist=True,
-            )
     # Every frame's embedding, (B * T, D), for the training-time monitors.
     output["embedding"] = emb.flatten(0, 1)
     self.log_dict(

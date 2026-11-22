@@ -1,5 +1,0 @@
-# @package _global_
-# Compared with lewm_clean: the grounded objective, LeWM's plus beta times the pixel error.
-defaults:
-  - sobal_dot/base
-  - override /loss: grounded

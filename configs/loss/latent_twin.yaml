@@ -1,8 +1,0 @@
-defaults:
-  - pixel
-  - _self_
-
-forward:
-  _target_: insight.losses.pixel.latent_twin
-  lam: 1.0 # weight of the stop-gradient latent error
-  grad_share_every: 50 # steps between gradient-share measurements

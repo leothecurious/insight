@@ -1,7 +1,0 @@
-defaults:
-  - pixel
-  - _self_
-
-forward:
-  _target_: insight.losses.pixel.pixel_sigreg
-  sigreg_weight: 0.09

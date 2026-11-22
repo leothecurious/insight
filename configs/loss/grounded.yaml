@@ -1,9 +1,0 @@
-defaults:
-  - pixel
-  - _self_
-
-forward:
-  _target_: insight.losses.pixel.grounded
-  beta: 1.0 # weight of the pixel error
-  sigreg_weight: 0.09
-  grad_share_every: 50 # steps between gradient-share measurements

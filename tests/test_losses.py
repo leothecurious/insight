@@ -1,14 +1,12 @@
 from types import SimpleNamespace
 
-import pytest
 import torch
 from stable_worldmodel.wm.lewm import LeWM
 from stable_worldmodel.wm.loss import SIGReg
 
-from insight.losses.common import grad_shares
-from insight.losses.pixel import grounded, latent_twin, pixel, pixel_sigreg, reconstruction
+from insight.losses.reconstruction import reconstruction
 
-B, T, D = 6, 2, 4
+B, D = 6, 4
 
 
 def stub(emb):
@@ -27,32 +25,6 @@ def stub(emb):
         log=lambda *a, **k: None,
         log_dict=lambda *a, **k: None,
     )
-
-
-@pytest.mark.parametrize(
-    ("loss", "weights", "target_trained", "sigreg_trained"),
-    [
-        (pixel, {}, False, False),
-        (grounded, {"beta": 1.0, "sigreg_weight": 0.09, "grad_share_every": 1}, True, True),
-        (latent_twin, {"lam": 1.0, "grad_share_every": 1}, False, False),
-        (pixel_sigreg, {"sigreg_weight": 0.09}, True, True),
-    ],
-)
-def test_pixel_losses_route_gradients_as_specified(loss, weights, target_trained, sigreg_trained):
-    """The pixel twin trains on pixels only, the latent twin's target is a stop-gradient and grounded
-    trains the latent term and SIGReg through the target frame as well. A leak would let the encoder
-    chase its own target or be regularised by a term the objective omits, and the logged losses would
-    look the same."""
-    emb = torch.randn(B, T, D, requires_grad=True)
-    batch = {"pixels": torch.randn(B, T, 3, 2, 2), "action": torch.randn(B, T, D)}
-    module = stub(emb)
-    output = loss(module, batch, "fit", history_size=1, num_preds=1, **weights)
-
-    grads = torch.autograd.grad(output["loss"], [emb, *module.decoder.parameters()])
-    assert grads[0][:, 0].abs().sum() > 0  # the context frame trains through the prediction
-    assert (grads[0][:, 1].abs().sum() > 0) == target_trained
-    assert all(g.abs().sum() > 0 for g in grads[1:])  # every objective trains the decoder
-    assert output["sigreg_loss"].requires_grad == sigreg_trained
 
 
 def test_reconstruction_trains_the_encoder_through_the_rollout_of_the_first_frame():
@@ -78,10 +50,3 @@ def test_reconstruction_trains_the_encoder_through_the_rollout_of_the_first_fram
     grad_first, grad_rest = torch.autograd.grad(output["loss"], [first, rest], allow_unused=True)
     assert grad_first.abs().sum() > 0
     assert grad_rest is None
-
-
-def test_grad_shares_split_the_gradient_norm_at_the_embedding():
-    emb = torch.randn(3, 4, requires_grad=True)
-    shares = grad_shares({"a": (2 * emb).sum(), "b": (6 * emb).sum()}, emb)
-    assert float(shares["a"]) == pytest.approx(0.25) and float(shares["b"]) == pytest.approx(0.75)
-    assert emb.grad is None
