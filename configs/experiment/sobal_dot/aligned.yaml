@@ -1,0 +1,16 @@
+# @package _global_
+# Sobal et al.'s data and budget (vladisai/JEPA_SSL_NeurIPS_2022 at 03eb1730), on top of an arm of this
+# experiment: +experiment=[sobal_dot/ARM,sobal_dot/aligned]. Their code draws about 1M fresh 17-frame
+# sequences per run (100 epochs of 9,984, data/single.py:85-87, train.py:139) on 28 px frames
+# (data/single.py:30); here 1M recorded sequences are seen once. 4 px patches still tile 28 px frames.
+img_size: 28
+data:
+  dataset:
+    name: dot1m_train.h5
+  split: {val: {name: dot1m_val.h5}}
+  measure:
+    files: [dot1m_probe.h5, dot1m_test.h5]
+trainer:
+  max_epochs: 1
+checkpoint:
+  epochs: [1]

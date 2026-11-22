@@ -110,6 +110,7 @@ def run(cfg):
             {"model": cfg.model, **cfg.loss.modules},
             cfg.checkpoint.epochs,
             cache_dir=cfg.paths.runs,
+            steps=cfg.checkpoint.get("steps"),
         ),
         GapCallback(),
     ]
