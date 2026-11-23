@@ -22,7 +22,9 @@ num_eval: 50
 goal_offset_steps: 25
 eval_budget: 50
 
-# action_block and history_len come from the run: its frameskip and wm.history_size.
+# action_block comes from the run. history_len defaults to the training context; set it to
+# evaluate a checkpoint with a different number of real context frames.
+history_len: null
 plan_config:
   horizon: 5
   receding_horizon: 5

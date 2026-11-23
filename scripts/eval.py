@@ -29,10 +29,11 @@ def run(cfg):
     run_dir = run_dir.resolve()
     train = OmegaConf.load(run_dir / "config.yaml")
     train.data.dataset.cache_dir = cfg.paths.data
+    history_len = train.wm.history_size if cfg.history_len is None else cfg.history_len
     plan = swm.PlanConfig(
         **cfg.plan_config,
         action_block=train.data.dataset.frameskip,
-        history_len=train.wm.history_size,
+        history_len=history_len,
     )
     assert plan.plan_len <= cfg.eval_budget, "the plan must fit in eval_budget"
 
