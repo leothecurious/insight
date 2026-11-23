@@ -68,17 +68,22 @@ def run(cfg):
     models = {"model": world_model, **extra_modules}
 
     # One optimizer over the model and the loss modules, so gradient clipping sees their joint norm.
-    total_steps = cfg.trainer.max_epochs * len(train)
+    total_steps = cfg.trainer.max_epochs * len(train) // cfg.accumulation
+    schedulers = {
+        "warmup_cosine": {
+            "type": "LinearWarmupCosineAnnealingLR",
+            "warmup_steps": max(1, int(0.01 * total_steps)),
+            "max_steps": total_steps,
+        },
+        "constant": {"type": "ConstantLR", "factor": 1.0},
+    }
     optimizers = {
         "model_opt": {
             "modules": "|".join(models),
             "optimizer": dict(cfg.optimizer),
-            "scheduler": {
-                "type": "LinearWarmupCosineAnnealingLR",
-                "warmup_steps": max(1, int(0.01 * total_steps)),
-                "max_steps": total_steps,
-            },
+            "scheduler": schedulers[cfg.schedule],
             "interval": "epoch",
+            "frequency": cfg.accumulation,
         }
     }
 

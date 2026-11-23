@@ -1,0 +1,10 @@
+# @package _global_
+# Compared with reconstruction_clean: the RSSM loss. Learning rate and min_var are those of their clean
+# config (sweep_changing_uniform.(0).rssm.best.yaml).
+defaults:
+  - sobal_dot/rssm_base
+
+optimizer:
+  lr: 7.289764181769937e-05
+model:
+  min_var: 0.1

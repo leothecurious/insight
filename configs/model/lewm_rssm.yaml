@@ -1,0 +1,7 @@
+defaults:
+  - lewm
+  - _self_
+
+_target_: insight.models.rssm.RSSMLeWM
+embed_dim: ${embed_dim}
+min_var: ???

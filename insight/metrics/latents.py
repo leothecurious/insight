@@ -70,4 +70,5 @@ def extract(model, loader, transform, precision="fp32", rollout=False):
         out["z"].append(z.float().cpu())
         out["action"].append(batch["action"].cpu())
         out["valid"].append(batch["valid"].cpu())
-    return {k: torch.cat(v) for k, v in out.items()}
+    # Pop each list as it is joined so the chunks and the joined tensor are never all held at once.
+    return {k: torch.cat(out.pop(k)) for k in list(out)}

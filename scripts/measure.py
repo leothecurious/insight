@@ -91,6 +91,7 @@ def run(cfg):
     else:
         model = swm.wm.utils.load_pretrained(f"{cfg.run}/{cfg.weights}", cache_dir=cfg.paths.runs)
     model = model.to(cfg.device).eval().requires_grad_(False)
+    torch.manual_seed(cfg.seed)
     stem = Path(cfg.weights).stem
     latents_path = run_dir / f"{stem}_latents.pt"
 

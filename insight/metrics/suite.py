@@ -73,17 +73,19 @@ def state_probe(
         control = probes.control_mae(state[tr], y[tr], state[te], y[te], angle, seed)
         res = {"control_mae": control, "n_train": len(tr), "n_test": len(te)}
         for w in windows:
-            X = probes.windowed(z, n, t, w)
+            X_tr, X_te = (probes.windowed(z, n[rows], t[rows], w) for rows in (tr, te))
             for kind in kinds:
                 res[f"{kind}_w{w}"] = probes.probe_errors(
-                    kind, X[tr], y[tr], X[te], y[te], angle, control, seed
+                    kind, X_tr, y[tr], X_te, y[te], angle, control, seed
                 )
         out[lat.target_names[j]] = res
     return out
 
 
-def rollout_probe(lat, max_train=None, max_test=None, seed=0):
+def rollout_probe(lat, max_train=None, max_test=None, seed=0, chunk=1 << 18):
     """Joint linear position readout shared across all open-loop timesteps.
+
+    The readout is fit over chunks of ``chunk`` frames, so every train frame can be used.
 
     Dot coordinates are fractions of the image side length. The paper-style
     summary averages timestep Euclidean RMSEs, rather than pooling frames.
@@ -98,11 +100,17 @@ def rollout_probe(lat, max_train=None, max_test=None, seed=0):
     tr, te = _split(side, max_train, max_test, seed)
     if not len(tr) or not len(te):
         raise ValueError("rollout_probe requires valid train and test frames")
-    X = lat.predicted_z.numpy()[n, t]
-    y = lat.target.numpy()[n, t][:, columns]
-    probe = probes.fit_probe("linear", X[tr], y[tr], seed)
-    squared_error = ((probe.predict(X[te]) - y[te]) ** 2).sum(axis=1)
-    center_squared_error = ((0.5 - y[te]) ** 2).sum(axis=1)
+    predicted_z, target = lat.predicted_z.numpy(), lat.target.numpy()[:, :, columns]
+
+    def train_chunks():
+        for i in range(0, len(tr), chunk):
+            rows = tr[i : i + chunk]
+            yield predicted_z[n[rows], t[rows]], target[n[rows], t[rows]]
+
+    probe = probes.StreamedLinear(train_chunks)
+    y = target[n[te], t[te]]
+    squared_error = ((probe.predict(predicted_z[n[te], t[te]]) - y) ** 2).sum(axis=1)
+    center_squared_error = ((0.5 - y) ** 2).sum(axis=1)
     test_t = t[te]
     counts = [int((test_t == step).sum()) for step in range(lat.valid.shape[1])]
 
@@ -127,6 +135,7 @@ def rollout_probe(lat, max_train=None, max_test=None, seed=0):
         **model,
         "center_control": center,
         "r": model["mean_rmse"] / center["mean_rmse"],
+        "r_pooled": model["pooled_rmse"] / center["pooled_rmse"],
     }
 
 
@@ -160,23 +169,27 @@ def effective_rank(Z):
     return float(torch.exp(-(p * p.clamp_min(1e-12).log()).sum())), sv
 
 
-def rank_spectrum(lat, frame=None, top=32):
+def rank_spectrum(lat, frame=None, top=32, max_frames=None, seed=0):
     """Effective rank, top-2 variance share and PCA spectrum of the latents
-    of one window frame, or of every valid frame when ``frame`` is None."""
+    of one window frame, or of every valid frame when ``frame`` is None,
+    on a random subsample of at most ``max_frames`` frames."""
+    valid = lat.valid.numpy()
     if frame is None:
-        m = lat.valid
-        Z = lat.z[m]
+        n, t = np.nonzero(valid)
     else:
-        m = lat.valid[:, frame]
-        Z = lat.z[m, frame]
-    erank, sv = effective_rank(Z)
+        n = np.flatnonzero(valid[:, frame])
+        t = np.full_like(n, frame)
+    if max_frames is not None and len(n) > max_frames:
+        keep = np.sort(np.random.default_rng(seed).choice(len(n), max_frames, replace=False))
+        n, t = n[keep], t[keep]
+    erank, sv = effective_rank(lat.z[n, t])
     ev = sv**2 / (sv**2).sum()
     return {
         "erank": erank,
         "top2_var": float(ev[:2].sum()),
         "spectrum": ev[:top].tolist(),
         "dim": int(lat.z.shape[-1]),
-        "n": int(m.sum()),
+        "n": len(n),
     }
 
 
