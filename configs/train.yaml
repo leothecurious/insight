@@ -6,8 +6,9 @@ defaults:
   - launcher: local
   - optional local: local
 
-# One run name for the weights, config.yaml, resume state and metrics. Rerunning a name resumes it.
-run: lewm
+# One run name for the weights, config.yaml, resume state and metrics.
+run: ???
+resume: false
 # The run name without its seed: W&B groups a series' seeds by it (docs/naming.md).
 series: ${eval:'"${run}".rsplit("_s", 1)[0]'}
 
@@ -61,7 +62,7 @@ monitor:
   enabled: true
   queue_length: 4096
 
-# Opened before any work starts; the keys are WandbLogger arguments.
+# The keys under config are WandbLogger arguments.
 wandb:
   enabled: false
   config:
