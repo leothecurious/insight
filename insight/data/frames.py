@@ -1,8 +1,8 @@
 """Draw frames from stored state rows with stable-envs.
 
-A port of stable-envs' ``examples/lewm/state_render.py`` as a stable-pretraining GPU transform.
-Each leaf of the frame spec names the dataset column and the ``[start, stop)`` columns that hold one
-State field.
+Following stable-envs' ``examples/lewm/state_render.py``, fill State fields from dataset rows and
+call ``env.render(state)``. Each leaf of the frame spec maps a range of a dataset column to one
+State field. During training, stable-pretraining calls this transform after batch transfer.
 """
 
 import stable_envs as snv
