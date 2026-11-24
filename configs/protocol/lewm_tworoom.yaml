@@ -1,0 +1,5 @@
+# @package _global_
+# LeWM paper, sections D and F.1: TwoRoom context and control protocol.
+history_len: 1
+goal_offset_steps: 25
+eval_budget: 50

@@ -1,0 +1,76 @@
+"""Draw frames from stored state rows with stable-envs.
+
+Following stable-envs' ``examples/lewm/state_render.py``, fill State fields from dataset rows and
+call ``env.render(state)``. Each leaf of the frame spec maps a range of a dataset column to one
+State field. During training, stable-pretraining calls this transform after batch transfer.
+"""
+
+import stable_envs as snv
+import torch
+from stable_envs import get_field
+from torch import nn
+
+
+class Frames(nn.Module):
+    """Write ``(B, T, D)`` state columns into States and set ``batch["pixels"]`` to ``(B, T, 3, H, W)`` floats in [0, 1].
+
+    Fields not named in ``spec["leaves"]`` keep their ``env.reset(seed=0)`` values, and the fields in
+    ``spec["zero"]`` are cleared. ``spec`` is a plain container.
+    """
+
+    def __init__(self, spec):
+        super().__init__()
+        self.spec = spec
+        self.leaves = [(v["leaf"], v["column"], *v["columns"]) for v in spec["leaves"].values()]
+        self._env = self._template = None
+        self._states = {}
+
+    def __getstate__(self):
+        # gymnasium deep-copies env kwargs (Wrapper.spec); drop the live env from copies.
+        state = self.__dict__.copy()
+        state.update(_env=None, _template=None, _states={})
+        return state
+
+    def _env_on(self, device):
+        if self._env is None:
+            self._env = snv.make(
+                self.spec["env"], num_envs=1, device=str(device), **(self.spec.get("kwargs") or {})
+            )
+            self._env.reset(seed=0)
+            self._template = self._env.get_state()
+        return self._env
+
+    def _state(self, n):
+        if n not in self._states:
+            self._states[n] = self._template.expand(n).clone()
+        return self._states[n]
+
+    @torch.no_grad()
+    def draw(self, batch):
+        """Return ``(B, T, H, W, 3)`` uint8 frames of the ``(B, T, D)`` columns of ``batch``."""
+        column = self.leaves[0][1]
+        b, t = batch[column].shape[:2]
+        env = self._env_on(batch[column].device)
+        state = self._state(b * t)
+        for leaf, column, start, stop in self.leaves:
+            field = get_field(state, leaf)
+            field.copy_(batch[column][..., start:stop].reshape(field.shape).to(field.dtype))
+        for leaf in self.spec.get("zero") or ():
+            get_field(state, leaf).zero_()
+        frames = env.render(state, size=self.spec["size"])
+        return frames.reshape(b, t, *frames.shape[-3:])
+
+    def columns(self, state):
+        """Read the columns of a State, shaped ``(B, 1, D)``: the inverse of what ``draw`` writes."""
+        out = {}
+        for leaf, column, start, stop in self.leaves:
+            field = get_field(state, leaf)
+            if column not in out:
+                width = max(stop for _, c, _, stop in self.leaves if c == column)
+                out[column] = field.new_zeros(field.shape[0], 1, width)
+            out[column][..., start:stop] = field.reshape(field.shape[0], 1, stop - start)
+        return out
+
+    def forward(self, batch):
+        batch["pixels"] = self.draw(batch).permute(0, 1, 4, 2, 3).float().div_(255)
+        return batch

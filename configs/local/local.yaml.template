@@ -1,0 +1,5 @@
+# @package _global_
+# Machine-specific settings. Copy to local.yaml (gitignored) and uncomment what differs here.
+# paths:
+#   data: /abs/path # holds datasets/
+#   runs: /abs/path # holds checkpoints/

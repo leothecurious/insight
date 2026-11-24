@@ -1,0 +1,35 @@
+dataset:
+  name: pusht_expert_train.h5
+  frameskip: 5
+  num_steps: ${eval:'${wm.history_size} + ${wm.num_preds}'}
+  keys_to_load: [action, state, episode_idx, step_idx]
+  keys_to_cache: ${.keys_to_load}
+ids: {episode: episode_idx, step: step_idx}
+normalize: [action]
+split: {val_fraction: 0.1}    # or val: {name: <file>} for a separate validation set
+frames:
+  env: PushT
+  size: ${img_size}
+  leaves:
+    agent: {leaf: current.body.agent.position, column: state, columns: [0, 2]}
+    block: {leaf: current.body.block.position, column: state, columns: [2, 4]}
+    angle: {leaf: current.body.block.angle, column: state, columns: [4, 5]}
+  zero: [current.render_segments, current.render_segment_count]
+# How planning binds to this dataset (insight.planning.task.Task): the State leaf that holds the
+# observation, the observation columns that are proprioception, and reset option <- dataset column.
+# A column named goal_X is X at the goal step.
+eval:
+  observation_leaf: current.observation
+  proprio_columns: [0, 1, 5, 6]
+  reset_options: {state: state, goal_state: goal_state}
+# What measure decodes from the latents: each target is column[:, index] in dataset units, angles
+# periodic. columns gives the expected width of each column.
+measure:
+  columns:
+    - {column: state, dim: 7} # agent_x, agent_y, block_x, block_y, block_angle, agent_vx, agent_vy
+  targets:
+    - {name: agent_x, column: state, index: 0}
+    - {name: agent_y, column: state, index: 1}
+    - {name: block_x, column: state, index: 2}
+    - {name: block_y, column: state, index: 3}
+    - {name: block_angle, column: state, index: 4, angle: true}

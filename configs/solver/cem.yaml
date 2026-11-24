@@ -1,0 +1,3 @@
+_target_: stable_worldmodel.planning.solver.CEMSolver
+device: "cuda"
+seed: ${seed}

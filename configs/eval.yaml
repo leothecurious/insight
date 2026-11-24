@@ -1,0 +1,31 @@
+defaults:
+  - _self_
+  - solver: cem
+  - objective: goal_mse
+  - launcher: local
+  - protocol: null
+  - optional local: local
+
+# The run's folder holds weights_epoch_N.pt, config.json and config.yaml. weights: random plans nothing.
+run: ???
+weights: ???
+
+paths:
+  data: null # holds datasets/
+  runs: null # holds checkpoints/
+
+seed: 42
+env_device: cpu # simulator stepped by the Gym adapter
+render_device: cuda # state-to-pixel rendering for observations and goals
+
+# Start and goal pairs from the dataset: the goal is goal_offset_steps after the start.
+num_eval: 50
+goal_offset_steps: 25
+eval_budget: 50
+
+# action_block comes from the run. history_len defaults to the training context; set it to
+# evaluate a checkpoint with a different number of real context frames.
+history_len: null
+plan_config:
+  horizon: 5
+  receding_horizon: 5
