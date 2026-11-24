@@ -23,7 +23,10 @@ from insight.metrics.latents import Latents, extract
 
 def get_latents(cfg, train, model, path, train_set, val_set):
     if cfg.latents_path:
-        return Latents.load(cfg.latents_path)
+        lat = Latents.load(cfg.latents_path)
+        if lat.embedding != cfg.embedding:
+            raise ValueError(f"{cfg.latents_path} stores {lat.embedding}, expected {cfg.embedding}")
+        return lat
 
     frame_columns = {leaf.column for leaf in train.data.frames.leaves.values()}
     if train.data.frames.get("nuisance"):
@@ -39,6 +42,7 @@ def get_latents(cfg, train, model, path, train_set, val_set):
         data.side(train_set)[0].gpu_transform,
         cfg.windows.precision,
         cfg.windows.rollout,
+        embedding=cfg.embedding,
     )
     lat = Latents(
         **out,
@@ -48,6 +52,7 @@ def get_latents(cfg, train, model, path, train_set, val_set):
         target_names=[t.name for t in targets],
         target_angle=[bool(t.get("angle", False)) for t in targets],
         target_group=[t.get("group", "state") for t in targets],
+        embedding=cfg.embedding,
     )
     lat.save(path)
     return lat
@@ -80,6 +85,8 @@ def measure_colour(cfg, train, model, ds):
 
 @hydra.main(version_base=None, config_path="../configs", config_name="measure")
 def run(cfg):
+    if cfg.get("pred_copy") and cfg.embedding != "projector":
+        raise ValueError("pred_copy requires embedding=projector")
     run_dir = Path(swm.data.utils.get_cache_dir(cfg.paths.runs, sub_folder="checkpoints"), cfg.run)
     run_dir = run_dir.resolve()
     train = OmegaConf.load(run_dir / "config.yaml")
@@ -93,6 +100,8 @@ def run(cfg):
     model = model.to(cfg.device).eval().requires_grad_(False)
     torch.manual_seed(cfg.seed)
     stem = Path(cfg.weights).stem
+    if cfg.embedding != "projector":
+        stem = f"{stem}_{cfg.embedding}"
     latents_path = run_dir / f"{stem}_latents.pt"
 
     start = time.perf_counter()

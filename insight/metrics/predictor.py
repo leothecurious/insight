@@ -1,12 +1,10 @@
-"""Ported from le-wm 189a36c metrics/predictor.py.
-
-Whether the predictor beats copying: its error against the last context embedding's.
+"""Compare one-step latent predictions against carrying the current embedding forward.
 
 Chunks of ``history + 1`` consecutive frames are slid over each held-out window. The
 predictor reads the first ``history`` frames with their actions, and at every position
 its output is scored against the next frame's embedding. The copy baseline outputs the
 embedding at that position instead. Squared errors are averaged over positions and
-dimensions, as in the validation ``pred_loss`` and ``copy_loss`` of the training loop.
+dimensions, using the same target shift as the one-step LeWM loss.
 """
 
 import torch

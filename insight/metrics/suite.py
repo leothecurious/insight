@@ -1,10 +1,10 @@
-"""Metric functions over ``Latents``, ported from le-wm 189a36c metrics/suite.py.
+"""Representation metrics computed over encoded evaluation windows.
 
 Each metric is ``fn(lat, **params) -> dict``. ``run`` evaluates a configured
 list of them.
 
 Sources:
-  state_probe   Gonzalez Laiz & Schneider, arXiv 2610.37588 (App. B and C.2)
+  state_probe   Gonzalez Laiz & Schneider, arXiv 2610.37588 (App. D)
   rollout_probe Sobal et al., arXiv 2211.10831: the dot's position read from open-loop predictions
   rank_spectrum EpiWM worldmodel/analysis/probes.py (the-puzzler/epijepa@0d43616)
 """
@@ -165,15 +165,21 @@ def effective_rank(Z):
     """exp of the entropy of the normalized singular values of centered Z."""
     Z = torch.as_tensor(Z, dtype=torch.float64)
     sv = torch.linalg.svdvals(Z - Z.mean(0))
-    p = sv / sv.sum()
+    total = sv.sum()
+    if total == 0:
+        return 0.0, sv
+    p = sv / total
     return float(torch.exp(-(p * p.clamp_min(1e-12).log()).sum())), sv
 
 
-def rank_spectrum(lat, frame=None, top=32, max_frames=None, seed=0):
-    """Effective rank, top-2 variance share and PCA spectrum of the latents
-    of one window frame, or of every valid frame when ``frame`` is None,
-    on a random subsample of at most ``max_frames`` frames."""
+def rank_spectrum(lat, frame=None, top=32, max_frames=None, seed=0, validation_only=False):
+    """Effective rank and PCA spectrum for a seeded sample of valid frames.
+
+    Constant embeddings have rank and variance shares of zero.
+    """
     valid = lat.valid.numpy()
+    if validation_only:
+        valid = valid & ~lat.train.numpy()[:, None]
     if frame is None:
         n, t = np.nonzero(valid)
     else:
@@ -182,8 +188,11 @@ def rank_spectrum(lat, frame=None, top=32, max_frames=None, seed=0):
     if max_frames is not None and len(n) > max_frames:
         keep = np.sort(np.random.default_rng(seed).choice(len(n), max_frames, replace=False))
         n, t = n[keep], t[keep]
+    if not len(n):
+        raise ValueError("rank_spectrum needs at least one valid frame")
     erank, sv = effective_rank(lat.z[n, t])
-    ev = sv**2 / (sv**2).sum()
+    variance = sv.square()
+    ev = variance / variance.sum() if erank else variance
     return {
         "erank": erank,
         "top2_var": float(ev[:2].sum()),

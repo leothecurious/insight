@@ -1,6 +1,6 @@
 """Evaluation windows: sampling, state rows and probe targets.
 
-Ported from le-wm 189a36c metrics/data.py. A window is ``(episode, start, n_frames)``: ``n_frames``
+A window is ``(episode, start, n_frames)``: ``n_frames``
 observations taken every ``frameskip`` rows from ``start``, with the actions between them, as in
 training. Windows shorter than the requested length are padded and masked. A window holds state rows;
 the dataset's ``gpu_transform`` draws its frames on the GPU.

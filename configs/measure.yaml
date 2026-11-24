@@ -16,6 +16,7 @@ paths:
 
 seed: 0
 device: cuda
+embedding: projector # projector | backbone_cls
 
 # Windows are drawn from the run's training episodes (probe train side) and validation episodes
 # (probe test side, predictor-vs-copy).
@@ -32,8 +33,6 @@ windows:
 
 metrics:
   - {name: state_probe, groups: [state], kinds: [linear, mlp], windows: [1]}
-  - {name: reverse_probe, groups: [state], kinds: [linear, mlp]}
-  - {name: rank_spectrum, frame: null} # every valid frame; frame 0 is the episode start
 
 # predictor error against copying the last context embedding, on the validation windows; delete to skip
 pred_copy:

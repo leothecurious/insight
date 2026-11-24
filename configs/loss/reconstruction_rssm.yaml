@@ -3,7 +3,9 @@ forward:
   _partial_: true
   history_size: ${wm.history_size}
   free_nats: 3.0
-sigreg: {}
+regularizers:
+  sigreg:
+    _target_: stable_worldmodel.wm.loss.SIGReg
 modules:
   decoder:
     _target_: stable_pretraining.backbone.CNNImageDecoder
