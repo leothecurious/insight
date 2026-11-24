@@ -1,9 +1,24 @@
 """LeWM objective as a stable-pretraining forward function (stable-worldmodel ``scripts/train/lewm.py``)."""
 
+from __future__ import annotations
+
+from typing import TYPE_CHECKING, Any
+
 import torch
 
+if TYPE_CHECKING:
+    from stable_pretraining import Module
 
-def lewm(self, batch, stage, *, history_size, num_preds, sigreg_weight):
+
+def lewm(
+    self: Module,
+    batch: dict[str, Any],
+    stage: str,
+    *,
+    history_size: int,
+    num_preds: int,
+    sigreg_weight: float,
+) -> dict[str, Any]:
     """Predict the next embeddings from ``history_size`` frames and regularise the embeddings with SIGReg."""
     # NaN actions mark the start of an episode.
     batch["action"] = torch.nan_to_num(batch["action"], 0.0)

@@ -1,12 +1,10 @@
-"""Ported from le-wm 189a36c metrics/probes.py.
-
-The probe protocol of Gonzalez Laiz & Schneider (arXiv 2610.37588,
-App. C.2), shared by every metric that decodes a target.
+"""The probe protocol of Gonzalez Laiz & Schneider (arXiv 2610.37588,
+App. D), shared by every metric that decodes a target.
 
 Inputs are standardized and targets stay in dataset units. Angles are fit as
 (cos, sin), decoded with atan2 and scored by circular MAE. The error ratio
 eps = 100 * MAE / MAE_control compares against an MLP from the true state to
-shuffled targets, so 0 is exact decoding and 100 is chance.
+shuffled targets, so 0 is exact decoding and 100 matches that baseline's error.
 """
 
 import numpy as np

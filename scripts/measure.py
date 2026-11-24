@@ -23,7 +23,10 @@ from insight.metrics.latents import Latents, extract
 
 def get_latents(cfg, train, model, path, train_set, val_set):
     if cfg.latents_path:
-        return Latents.load(cfg.latents_path)
+        lat = Latents.load(cfg.latents_path)
+        if lat.embedding != cfg.embedding:
+            raise ValueError(f"{cfg.latents_path} stores {lat.embedding}, expected {cfg.embedding}")
+        return lat
 
     frame_columns = {leaf.column for leaf in train.data.frames.leaves.values()}
     if train.data.frames.get("nuisance"):
@@ -33,7 +36,13 @@ def get_latents(cfg, train, model, path, train_set, val_set):
         train_set, val_set, frame_columns, train.data.measure, cfg.windows, cfg.seed
     )
     targets = train.data.measure.targets
-    out = extract(model, loader, train_set.dataset.gpu_transform, cfg.windows.precision)
+    out = extract(
+        model,
+        loader,
+        train_set.dataset.gpu_transform,
+        cfg.windows.precision,
+        embedding=cfg.embedding,
+    )
     lat = Latents(
         **out,
         target=torch.from_numpy(target),
@@ -42,6 +51,7 @@ def get_latents(cfg, train, model, path, train_set, val_set):
         target_names=[t.name for t in targets],
         target_angle=[bool(t.get("angle", False)) for t in targets],
         target_group=[t.get("group", "state") for t in targets],
+        embedding=cfg.embedding,
     )
     lat.save(path)
     return lat
@@ -74,6 +84,8 @@ def measure_colour(cfg, train, model, ds):
 
 @hydra.main(version_base=None, config_path="../configs", config_name="measure")
 def run(cfg):
+    if cfg.get("pred_copy") and cfg.embedding != "projector":
+        raise ValueError("pred_copy requires embedding=projector")
     run_dir = Path(swm.data.utils.get_cache_dir(cfg.paths.runs, sub_folder="checkpoints"), cfg.run)
     run_dir = run_dir.resolve()
     train = OmegaConf.load(run_dir / "config.yaml")
@@ -86,6 +98,8 @@ def run(cfg):
         model = swm.wm.utils.load_pretrained(f"{cfg.run}/{cfg.weights}", cache_dir=cfg.paths.runs)
     model = model.to(cfg.device).eval().requires_grad_(False)
     stem = Path(cfg.weights).stem
+    if cfg.embedding != "projector":
+        stem = f"{stem}_{cfg.embedding}"
     latents_path = run_dir / f"{stem}_latents.pt"
 
     start = time.perf_counter()

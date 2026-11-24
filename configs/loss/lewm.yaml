@@ -4,5 +4,7 @@ forward:
   history_size: ${wm.history_size}
   num_preds: ${wm.num_preds}
   sigreg_weight: 0.09
-sigreg: {}
+regularizers:
+  sigreg:
+    _target_: stable_worldmodel.wm.loss.SIGReg
 modules: {}

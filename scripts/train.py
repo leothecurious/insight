@@ -1,4 +1,4 @@
-"""Train a world model: ``uv run scripts/train.py data=pusht model=lewm loss=lewm``.
+"""Train a world model: ``uv run scripts/train.py run=lewm_pusht_s0 data=pusht seed=0``.
 
 Follows stable-worldmodel ``scripts/train/lewm.py``. The model comes from the ``model`` group, the
 objective and its training-only modules from the ``loss`` group.
@@ -12,33 +12,73 @@ import lightning as pl
 import stable_pretraining as spt
 import stable_worldmodel as swm
 import torch
+from lightning.pytorch.callbacks import Callback
 from lightning.pytorch.loggers import WandbLogger
 from omegaconf import OmegaConf, open_dict
 from stable_pretraining.callbacks.queue import OnlineQueue
-from stable_worldmodel.wm.loss import SIGReg
+from stable_worldmodel.wm.utils import save_pretrained
 
-from insight.callbacks import PairCosines, SaveWeights
+from insight.callbacks import PairCosines
 from insight.data.build import build
 from insight.metrics import pairs
 
 ROOT = Path(__file__).resolve().parents[1]
 
 
+class SaveWeights(Callback):
+    """Save portable model weights and their Hydra configs at selected epochs."""
+
+    def __init__(self, run, configs, epochs, cache_dir):
+        super().__init__()
+        self.run, self.configs, self.epochs, self.cache_dir = run, configs, epochs, cache_dir
+
+    def on_train_epoch_end(self, trainer, pl_module):
+        epoch = trainer.current_epoch + 1
+        keep = self.epochs is None or epoch in self.epochs or epoch == trainer.max_epochs
+        if not (keep and trainer.is_global_zero):
+            return
+        for name, config in self.configs.items():
+            save_pretrained(
+                getattr(pl_module, name),
+                run_name=self.run if name == "model" else f"{self.run}/{name}",
+                config=config,
+                filename=f"weights_epoch_{epoch}.pt",
+                cache_dir=self.cache_dir,
+            )
+
+
+def _resume_config(cfg):
+    """Resolve settings and normalize the legacy LeWM regularizer declaration."""
+    config = OmegaConf.to_container(cfg, resolve=True)
+    config.pop("resume", None)
+    loss = config["loss"]
+    if "sigreg" in loss and "regularizers" not in loss:
+        loss["regularizers"] = {
+            "sigreg": {"_target_": "stable_worldmodel.wm.loss.SIGReg", **loss.pop("sigreg")}
+        }
+    return config
+
+
 @hydra.main(version_base=None, config_path="../configs", config_name="train")
 def run(cfg):
     run_dir = Path(swm.data.utils.get_cache_dir(cfg.paths.runs, "checkpoints"), cfg.run).resolve()
-    loggers = []
-    if cfg.wandb.enabled:
-        # Opened before any work, so a bad key or an offline run fails at once. W&B reads the commit
-        # from the repository around save_dir unless given git_root.
-        wandb_logger = WandbLogger(
-            **OmegaConf.to_container(cfg.wandb.config, resolve=True),
-            save_dir=str(run_dir),
-            settings={"git_root": str(ROOT)},
+    config_path = run_dir / "config.yaml"
+    resume = cfg.resume
+    ckpt_path = None
+    if resume:
+        if not run_dir.is_dir():
+            raise FileNotFoundError(f"cannot resume missing run directory: {run_dir}")
+        if not config_path.is_file():
+            raise FileNotFoundError(f"cannot resume without {config_path}")
+        ckpt_path = max(run_dir.glob("spt/runs/*/*/*/checkpoints/last.ckpt"), default=None)
+        if ckpt_path is None:
+            raise FileNotFoundError(
+                f"cannot resume without a full-state checkpoint under {run_dir}"
+            )
+    elif run_dir.exists():
+        raise FileExistsError(
+            f"run directory already exists: {run_dir}. Use a new name or set resume=true."
         )
-        if wandb_logger.experiment.offline or wandb_logger.experiment.disabled:
-            raise RuntimeError("wandb.enabled needs an online W&B run")
-        loggers.append(wandb_logger)
 
     # Manager seeds only when called, after the model is built.
     pl.seed_everything(cfg.seed, workers=True)
@@ -53,6 +93,25 @@ def run(cfg):
             "action"
         )
 
+    if resume:
+        saved_cfg = OmegaConf.load(config_path)
+        if _resume_config(cfg) != _resume_config(saved_cfg):
+            raise ValueError(f"resume config differs from {config_path}")
+    else:
+        run_dir.mkdir(parents=True)
+
+    loggers = []
+    if cfg.wandb.enabled:
+        # W&B reads the commit from the repository around save_dir unless given git_root.
+        wandb_logger = WandbLogger(
+            **OmegaConf.to_container(cfg.wandb.config, resolve=True),
+            save_dir=str(run_dir),
+            settings={"git_root": str(ROOT)},
+        )
+        if wandb_logger.experiment.offline or wandb_logger.experiment.disabled:
+            raise RuntimeError("wandb.enabled needs an online W&B run")
+        loggers.append(wandb_logger)
+
     rnd_gen = torch.Generator().manual_seed(cfg.seed)
     train = torch.utils.data.DataLoader(train_set, **cfg.loader, generator=rnd_gen)
     val = torch.utils.data.DataLoader(
@@ -66,6 +125,10 @@ def run(cfg):
     world_model = hydra.utils.instantiate(cfg.model)
     extra_modules = {name: hydra.utils.instantiate(c) for name, c in cfg.loss.modules.items()}
     models = {"model": world_model, **extra_modules}
+    regularizers = {
+        name: hydra.utils.instantiate(config)
+        for name, config in cfg.loss.get("regularizers", {}).items()
+    }
 
     total_steps = cfg.trainer.max_epochs * len(train)
     optimizers = {}
@@ -78,13 +141,12 @@ def run(cfg):
                 "warmup_steps": max(1, int(0.01 * total_steps)),
                 "max_steps": total_steps,
             },
-            "interval": "epoch",
         }
 
     data_module = spt.data.DataModule(train=train, val=val)
     world_model = spt.Module(
         **models,
-        sigreg=SIGReg(**cfg.loss.sigreg),
+        **regularizers,
         forward=hydra.utils.instantiate(cfg.loss.forward),
         optim=optimizers,
     )
@@ -97,8 +159,8 @@ def run(cfg):
     # spt's CSV logger and the requeue checkpoint checkpoints/last.ckpt, which is the resume point.
     spt.set(cache_dir=str(run_dir / "spt"), default_callbacks={"wandb_checkpoint": False})
 
-    run_dir.mkdir(parents=True, exist_ok=True)
-    OmegaConf.save(cfg, run_dir / "config.yaml", resolve=True)
+    if not resume:
+        OmegaConf.save(cfg, config_path, resolve=True)
     if cfg.wandb.enabled:
         wandb_logger.log_hyperparams(OmegaConf.to_container(cfg, resolve=True))
 
@@ -147,7 +209,7 @@ def run(cfg):
         trainer=trainer,
         module=world_model,
         data=data_module,
-        ckpt_path=max(run_dir.glob("spt/runs/*/*/*/checkpoints/last.ckpt"), default=None),
+        ckpt_path=ckpt_path,
         weights_only=False,
         seed=cfg.seed,
     )
