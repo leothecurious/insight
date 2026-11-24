@@ -15,7 +15,6 @@ import torch
 from lightning.pytorch.loggers import WandbLogger
 from omegaconf import OmegaConf, open_dict
 from stable_pretraining.callbacks.queue import OnlineQueue
-from stable_worldmodel.wm.loss import SIGReg
 
 from insight.callbacks import SaveWeights
 from insight.data.build import build
@@ -65,6 +64,10 @@ def run(cfg):
     world_model = hydra.utils.instantiate(cfg.model)
     extra_modules = {name: hydra.utils.instantiate(c) for name, c in cfg.loss.modules.items()}
     models = {"model": world_model, **extra_modules}
+    regularizers = {
+        name: hydra.utils.instantiate(config)
+        for name, config in cfg.loss.get("regularizers", {}).items()
+    }
 
     total_steps = cfg.trainer.max_epochs * len(train)
     optimizers = {}
@@ -83,7 +86,7 @@ def run(cfg):
     data_module = spt.data.DataModule(train=train, val=val)
     world_model = spt.Module(
         **models,
-        sigreg=SIGReg(**cfg.loss.sigreg),
+        **regularizers,
         forward=hydra.utils.instantiate(cfg.loss.forward),
         optim=optimizers,
     )
