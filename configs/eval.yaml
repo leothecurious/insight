@@ -3,6 +3,7 @@ defaults:
   - solver: cem
   - objective: goal_mse
   - launcher: local
+  - protocol: null
   - optional local: local
 
 # The run's folder holds weights_epoch_N.pt, config.json and config.yaml. weights: random plans nothing.
@@ -14,8 +15,8 @@ paths:
   runs: null # holds checkpoints/
 
 seed: 42
-env_device: cpu # the stable-envs environments
-render_device: cuda # the frames, as in training
+env_device: cpu # simulator stepped by the Gym adapter
+render_device: cuda # state-to-pixel rendering for observations and goals
 
 # Start and goal pairs from the dataset: the goal is goal_offset_steps after the start.
 num_eval: 50
