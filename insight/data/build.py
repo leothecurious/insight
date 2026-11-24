@@ -49,7 +49,8 @@ def _split(cfg, seed):
     if "val" in cfg["split"]:
         val = swm.data.load_dataset(**{**cfg["dataset"], **cfg["split"]["val"]})
         return dataset, dataset, val, np.ones(len(dataset.lengths), dtype=bool)
-    return dataset, *split_episodes(dataset, cfg["split"]["val_fraction"], seed)
+    split = cfg["split"]
+    return dataset, *split_episodes(dataset, split["val_fraction"], split.get("seed", seed))
 
 
 def scalers(cfg, seed):

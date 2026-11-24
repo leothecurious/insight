@@ -1,9 +1,8 @@
 """Measure a trained model: ``uv run scripts/measure.py run=<run> weights=weights_epoch_N.pt``.
 
-Ported from le-wm 189a36c measure.py. The run's ``config.yaml`` gives the dataset, the frames and the
-episode split; windows of its training and validation episodes are drawn through the run's frames,
-encoded once, and every metric reads those latents. Results are appended to ``<run>/measure_results.jsonl``
-and, when the run used W&B, written to its summary.
+The run's ``config.yaml`` gives the dataset, frame spec and episode split. Windows from both sides
+of the split are rendered and encoded once for reuse across metrics. Results are appended to
+``<run>/measure_results.jsonl`` and, when enabled, written to the W&B run summary.
 """
 
 import json
@@ -22,7 +21,10 @@ from insight.metrics.latents import Latents, extract
 
 def get_latents(cfg, train, model, path):
     if cfg.latents_path:
-        return Latents.load(cfg.latents_path)
+        lat = Latents.load(cfg.latents_path)
+        if lat.embedding != cfg.embedding:
+            raise ValueError(f"{cfg.latents_path} stores {lat.embedding}, expected {cfg.embedding}")
+        return lat
 
     train_set, val_set = build(train.data, train.seed)
     frame_columns = sorted({leaf.column for leaf in train.data.frames.leaves.values()})
@@ -30,7 +32,13 @@ def get_latents(cfg, train, model, path):
         train_set, val_set, frame_columns, train.data.measure, cfg.windows, cfg.seed
     )
     targets = train.data.measure.targets
-    out = extract(model, loader, train_set.dataset.gpu_transform, cfg.windows.precision)
+    out = extract(
+        model,
+        loader,
+        train_set.dataset.gpu_transform,
+        cfg.windows.precision,
+        embedding=cfg.embedding,
+    )
     lat = Latents(
         **out,
         target=torch.from_numpy(target),
@@ -39,6 +47,7 @@ def get_latents(cfg, train, model, path):
         target_names=[t.name for t in targets],
         target_angle=[bool(t.get("angle", False)) for t in targets],
         target_group=[t.get("group", "state") for t in targets],
+        embedding=cfg.embedding,
     )
     lat.save(path)
     return lat
@@ -46,6 +55,8 @@ def get_latents(cfg, train, model, path):
 
 @hydra.main(version_base=None, config_path="../configs", config_name="measure")
 def run(cfg):
+    if cfg.get("pred_copy") and cfg.embedding != "projector":
+        raise ValueError("pred_copy requires embedding=projector")
     run_dir = Path(swm.data.utils.get_cache_dir(cfg.paths.runs, sub_folder="checkpoints"), cfg.run)
     run_dir = run_dir.resolve()
     train = OmegaConf.load(run_dir / "config.yaml")
@@ -58,6 +69,8 @@ def run(cfg):
         model = swm.wm.utils.load_pretrained(f"{cfg.run}/{cfg.weights}", cache_dir=cfg.paths.runs)
     model = model.to(cfg.device).eval().requires_grad_(False)
     stem = Path(cfg.weights).stem
+    if cfg.embedding != "projector":
+        stem = f"{stem}_{cfg.embedding}"
     latents_path = run_dir / f"{stem}_latents.pt"
 
     start = time.perf_counter()
