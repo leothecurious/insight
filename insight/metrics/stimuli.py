@@ -1,7 +1,7 @@
 """Push-T scenes with a controllable block pose and goal outline, for the t_position pair suite.
 
 Ported from Enigma-Incorporated/The-Obsessed-Encoder@37819425 (``leworldmodel/additional_files/stimuli.py``,
-MIT licence) through the le-wm fork ``metrics/stimuli.py``. The scenes are drawn by stable-envs PushT through
+MIT licence). The scenes are drawn by stable-envs PushT through
 ``Frames``, with the goal pose written into the same State leaves as in ``configs/data/pusht_randgoal.yaml``.
 """
 

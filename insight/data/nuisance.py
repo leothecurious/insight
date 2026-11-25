@@ -1,12 +1,11 @@
 """Nuisance overlays: seeded axes of a dataset, drawn on the uint8 frames right after ``env.render``.
 
 ``CornerSquare`` ports the corner tag of Enigma-Incorporated/The-Obsessed-Encoder@37819425
-(``pixel_tag.py``), which the le-wm fork ``tag.py`` carried over. ``UniformNoise`` ports the uniform pixel
-noise of Sobal et al. (2022, arXiv 2211.10831, App. A.2) as the le-wm fork ``noise.py`` blended it. Their
-parameters are pure functions of ``(seed, episode)`` or ``(seed, episode, step)``, so train, measure and
-eval draw the same overlay for the same dataset row, independent of how rows are batched. The hash is the
-counter-based ``lowbias32`` of stable-envs ``envs/miniworld/simulation/rng.py`` (torch version), which is
-private to its family.
+(``pixel_tag.py``). ``UniformNoise`` implements the uniform pixel noise described by Sobal et al. (2022,
+arXiv 2211.10831, App. A.2). Their parameters are pure functions of ``(seed, episode)`` or
+``(seed, episode, step)``, so train, measure and eval draw the same overlay for the same dataset row,
+independent of how rows are batched. The hash is the counter-based ``lowbias32`` of stable-envs
+``envs/miniworld/simulation/rng.py`` (torch version), which is private to its family.
 """
 
 import torch

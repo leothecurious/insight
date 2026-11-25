@@ -6,7 +6,7 @@ defaults:
   - launcher: local
   - optional local: local
 
-# One run name for the weights, config.yaml, resume state and metrics.
+# One run name for the checkpoint directory, config.yaml, resume state and metrics.
 run: ???
 resume: false
 # The run name without its seed: W&B groups a series' seeds by it (docs/naming.md).
@@ -67,8 +67,9 @@ monitor:
   enabled: true
   queue_length: 4096
 
-# Pair cosines of the backbone on n dataset frames drawn before training, logged as val/pair/* (see
-# insight.metrics.pairs); the tag has the run's tag size when it has one. null skips.
+# Pair cosines compare same-content frames with different tags, same-tag frames with different content,
+# and unrelated background frames. They show whether the representation follows scene content or tag.
+# Logged as val/pair/* (see insight.metrics.pairs); the tag uses the run's tag size when present. null skips.
 pairs:
   n: 256
   every_n_steps: 100

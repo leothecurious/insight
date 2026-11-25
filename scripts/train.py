@@ -19,6 +19,7 @@ from stable_pretraining.callbacks.queue import OnlineQueue
 from stable_worldmodel.wm.utils import save_pretrained
 
 from insight.callbacks import GapCallback, PairCosines
+from insight.checkpoints import filename as checkpoint_filename
 from insight.data.build import build
 from insight.metrics import pairs
 
@@ -28,9 +29,10 @@ ROOT = Path(__file__).resolve().parents[1]
 class SaveWeights(Callback):
     """Save portable weights at configured optimizer steps and epochs."""
 
-    def __init__(self, run, configs, epochs, cache_dir, steps=None):
+    def __init__(self, run, series, configs, epochs, final_epoch, cache_dir, steps=None):
         super().__init__()
-        self.run, self.configs, self.epochs, self.cache_dir = run, configs, epochs, cache_dir
+        self.run, self.series, self.configs = run, series, configs
+        self.epochs, self.final_epoch, self.cache_dir = epochs, final_epoch, cache_dir
         self.steps = set(steps or ())
 
     def save(self, pl_module, filename):
@@ -46,14 +48,14 @@ class SaveWeights(Callback):
     def on_train_batch_end(self, trainer, pl_module, outputs, batch, batch_idx):
         if trainer.global_step in self.steps and trainer.is_global_zero:
             self.steps.discard(trainer.global_step)
-            self.save(pl_module, f"weights_step_{trainer.global_step}.pt")
+            self.save(pl_module, f"{self.series}_step_{trainer.global_step}.pt")
 
     def on_train_epoch_end(self, trainer, pl_module):
         epoch = trainer.current_epoch + 1
         keep = self.epochs is None or epoch in self.epochs or epoch == trainer.max_epochs
         if not (keep and trainer.is_global_zero):
             return
-        self.save(pl_module, f"weights_epoch_{epoch}.pt")
+        self.save(pl_module, checkpoint_filename(self.series, epoch, self.final_epoch))
 
 
 def _resume_config(cfg):
@@ -182,8 +184,10 @@ def run(cfg):
     callbacks = [
         SaveWeights(
             cfg.run,
+            cfg.series,
             {"model": cfg.model, **cfg.loss.modules},
             cfg.checkpoint.epochs,
+            cfg.trainer.max_epochs,
             cache_dir=cfg.paths.runs,
             steps=cfg.checkpoint.steps,
         ),
@@ -233,7 +237,9 @@ def run(cfg):
     manager()
 
     if cfg.wandb.enabled:
-        weights = run_dir / f"weights_epoch_{cfg.trainer.max_epochs}.pt"
+        weights = run_dir / checkpoint_filename(
+            cfg.series, cfg.trainer.max_epochs, cfg.trainer.max_epochs
+        )
         wandb_logger.experiment.summary["checkpoint/sha256"] = hashlib.sha256(
             weights.read_bytes()
         ).hexdigest()

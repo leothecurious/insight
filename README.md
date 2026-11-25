@@ -40,8 +40,8 @@ Give each training run a name. To resume from its full training checkpoint, repe
 
 ```bash
 uv run scripts/train.py data=tworoom run=lewm_tworoom_s0 seed=0
-uv run scripts/eval.py run=lewm_tworoom_s0 weights=weights_epoch_100.pt protocol=lewm_tworoom
-uv run scripts/measure.py run=lewm_tworoom_s0 weights=weights_epoch_100.pt
+uv run scripts/eval.py run=lewm_tworoom_s0 weights=lewm_tworoom_epoch_100.pt protocol=lewm_tworoom
+uv run scripts/measure.py run=lewm_tworoom_s0 weights=lewm_tworoom_epoch_100.pt
 ```
 
 The TwoRoom evaluation preset uses one context frame and leaves the checkpoint's training history intact. Set `num_eval=200` to match the episode count used in our TwoRoom reproduction.

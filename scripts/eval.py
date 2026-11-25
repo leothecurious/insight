@@ -1,4 +1,4 @@
-"""Plan with a trained model: ``uv run scripts/eval.py run=<run> weights=weights_epoch_N.pt``.
+"""Plan with a trained model: ``uv run scripts/eval.py run=<run> weights=<series>_epoch_N.pt``.
 
 Follows stable-worldmodel ``scripts/plan/eval_wm.py`` and stable-envs ``examples/lewm/eval.py``. The
 run's ``config.yaml`` gives the dataset, the frames, the action statistics and the planning units.

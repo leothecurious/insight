@@ -9,14 +9,16 @@ A run is named `<model>_<data>[_<arm>]_s<seed>`, in lowercase, with parts joined
 - `arm`: what this run ablates against its experiment's baseline, in shorthand: a hyperparameter's short name followed by its value (`lr3e-4`, `bs64`, `wd0.05`), or a component change (`nobn`). A baseline run has no arm.
 - `s<seed>`: the seed.
 
-Record hyperparameters in the run's `config.yaml`. Include a hyperparameter in the arm only when the experiment varies it. For a training-length sweep, use `ep<epochs>` for `trainer.max_epochs`. Checkpoints keep their own names, such as `weights_epoch_5.pt`.
+Record hyperparameters in the run's `config.yaml`. Include a hyperparameter in the arm only when the experiment varies it. For a training-length sweep, use `ep<epochs>` for `trainer.max_epochs`.
+
+Portable model and loss-module checkpoints use the run's `series` as a globally descriptive filename stem, without the seed. Epoch checkpoints use `<series>_epoch_<N>.pt`; optimizer-step checkpoints use `<series>_step_<N>.pt`. For example, `lewm_tworoom_epoch_10.pt` belongs in `lewm_tworoom_s0/` and remains identifiable when copied elsewhere. A length-sweep run such as `lewm_pusht_ep10_s0` saves its final checkpoint as `lewm_pusht_ep10.pt`; earlier saved epochs retain their epoch suffix, such as `lewm_pusht_ep10_epoch_5.pt`. Model and loss-module files share the filename because they are already stored in separate directories. Use an explicit run arm for any model, data or ablation difference that should distinguish artifacts. Other deterministic settings remain recorded in `config.yaml` rather than being duplicated into filenames. The `weights=` argument still accepts existing checkpoint paths, including legacy `weights_epoch_<N>.pt` files.
 
 | Run | Meaning |
 | --- | --- |
 | `lewm_pusht_s1` | LeWM on Push-T, seed 1 |
 | `lewm_tworoom_nobn_s1` | LeWM on TwoRoom without the projector's BatchNorm |
 | `lewm_pusht_lr3e-4_s0` | Learning-rate sweep arm at 3e-4 |
-| `lewm_pusht_ep10_s0` | Training-length sweep arm at 10 epochs |
+| `lewm_pusht_ep10_s0` | Training-length sweep arm at 10 epochs; final file `lewm_pusht_ep10.pt` |
 | `lewm_dot_noiseepisode_s1` | LeWM on the moving dot with per-episode noise |
 
 W&B never reuses a deleted run id, so a run that is retrained after its W&B run was deleted takes a new name.
