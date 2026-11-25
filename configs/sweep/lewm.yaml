@@ -1,6 +1,5 @@
 # @package _global_
-# The LeWM arm: learning rate, effective batch of 128 to 512, and the SIGReg weight, which plays the role of the
-# JEPA baselines' loss coefficients in their search.
+# Architecture and optimizer parameters are centred on LeWM's config as in sweep/reconstruction; the SIGReg weight is the method parameter, log-uniform around LeWM's 0.09.
 defaults:
   - base
   - _self_
@@ -8,6 +7,8 @@ defaults:
 hydra:
   sweeper:
     params:
-      optimizer.lr: tag(log, interval(5e-5, 5e-3))
+      optimizer.lr: tag(log, interval(1e-5, 5e-4))
+      optimizer.weight_decay: tag(log, interval(1e-4, 1e-1))
       accumulation: choice(1, 2, 4)
       loss.forward.sigreg_weight: tag(log, interval(0.01, 1.0))
+loader: {batch_size: 64}

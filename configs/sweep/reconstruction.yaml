@@ -1,6 +1,5 @@
 # @package _global_
-# The MSE reconstruction arm. Learning rate and effective batch, as micro-batches of 64 and 1 to 8 of them per
-# step (their dataset_batch_size is 64 to 512).
+# Architecture and optimizer parameters are centred on LeWM's config (configs/train.yaml: AdamW, lr 5e-5, weight_decay 1e-3, warmup_cosine), the effective batch is 64 times the accumulation; the reconstruction loss has no method parameter.
 defaults:
   - base
   - _self_
@@ -8,6 +7,7 @@ defaults:
 hydra:
   sweeper:
     params:
-      optimizer.lr: tag(log, interval(5e-5, 5e-3))
-      accumulation: choice(1, 2, 4, 8)
+      optimizer.lr: tag(log, interval(1e-5, 5e-4))
+      optimizer.weight_decay: tag(log, interval(1e-4, 1e-1))
+      accumulation: choice(1, 2, 4)
 loader: {batch_size: 64}

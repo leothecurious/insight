@@ -5,7 +5,7 @@
 # Each trial trains a run, fits the rollout probe on the probe file and scores it on the validation file; the
 # returned value is its r, which Hydra's Optuna sweeper minimizes over RandomSampler draws. A cheaper trial
 # trains on a smaller recorded file (data.dataset.name=<file>).
-# The released code (vladisai/JEPA_SSL_NeurIPS_2022 at 03eb1730) holds no sweep script. The ranges are read off
+# The released code (vladisai/JEPA_SSL_NeurIPS_2022 at 03eb1730) holds no sweep script. The RSSM ranges are read off
 # its best configs, reproduce_configs/*.rssm.best.yaml: learning_rate (line 54) from 7.3e-5 to 3.7e-3, min_var
 # (line 57) in {0, 0.02, 0.05, 0.1}, dataset_batch_size (line 21) in {64, 128, 256, 512}.
 defaults:
