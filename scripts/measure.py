@@ -1,4 +1,4 @@
-"""Measure a trained model: ``uv run scripts/measure.py run=<run> weights=weights_epoch_N.pt``.
+"""Measure a trained model: ``uv run scripts/measure.py run=<run> weights=<series>_epoch_N.pt``.
 
 Ported from le-wm 189a36c measure.py. The run's ``config.yaml`` gives the dataset, the frames and the
 episode split; windows of its training and validation episodes are drawn through the run's frames,

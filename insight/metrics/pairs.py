@@ -14,8 +14,8 @@ Fig. 9) and at the projector output, which is what the planner sees.
 
 The colour probe decodes the stamped colour from the latent and reports the error relative to chance.
 
-Ported from the le-wm fork ``metrics/pairs.py``, after Enigma-Incorporated/The-Obsessed-Encoder@37819425
-(``common/pair_metrics.py``, ``leworldmodel/additional_files/callbacks/pair_analysis.py``). Their frames
+Ported from Enigma-Incorporated/The-Obsessed-Encoder@37819425 (``common/pair_metrics.py``,
+``leworldmodel/additional_files/callbacks/pair_analysis.py``). Their frames
 are freshly rendered; ours are drawn from dataset rows, which the encoder may have seen in training.
 """
 

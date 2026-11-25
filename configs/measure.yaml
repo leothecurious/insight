@@ -3,7 +3,7 @@ defaults:
   - launcher: local
   - optional local: local
 
-# The run's folder holds weights_epoch_N.pt, config.json and config.yaml. weights: random measures an
+# The run's folder holds <series>_epoch_N.pt, config.json and config.yaml. weights: random measures an
 # untrained model built from the run's config. Targets come from the run's data.measure.
 run: ???
 weights: ???
@@ -33,18 +33,18 @@ windows:
 metrics:
   - {name: state_probe, groups: [state], kinds: [linear, mlp], windows: [1]}
 
-# predictor error against copying the last context embedding, on the validation windows; delete to skip
+# Predictor error against copying the last context embedding, on the validation windows.
 pred_copy:
   batch_size: 512
 
-# Pair cosines (insight.metrics.pairs): colour = dataset frames stamped with a corner tag, t_position =
-# Push-T scenes whose goal outline is the tag and whose block pose is the content. Delete to skip.
+# Pair cosines (insight.metrics.pairs): colour uses same-tag/same-content pairs against unrelated
+# background frames; t_position uses Push-T scenes whose goal outline is the tag and block pose is content.
 pairs:
   suite: colour # colour | t_position
   n: 256
 tag_size: 5 # corner tag of the pair metric and the colour probe; a run trained with a tag uses its own size
 
-# Decode the stamped colour from the latents; delete to skip.
+# Decode the stamped colour from the latents.
 colour:
   n: 4096
   kinds: [ridge, mlp]

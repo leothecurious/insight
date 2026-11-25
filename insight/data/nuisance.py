@@ -1,7 +1,7 @@
 """Nuisance overlays: seeded axes of a dataset, drawn on the uint8 frames right after ``env.render``.
 
 ``CornerSquare`` ports the corner tag of Enigma-Incorporated/The-Obsessed-Encoder@37819425
-(``pixel_tag.py``), which the le-wm fork ``tag.py`` carried over. Its colour is a pure function of
+(``pixel_tag.py``). Its colour is a pure function of
 ``(seed, episode)`` or ``(seed, episode, step)``, so train, measure and eval draw the same colour for the
 same dataset row, independent of how rows are batched. The hash is the counter-based ``lowbias32`` of
 stable-envs ``envs/miniworld/simulation/rng.py`` (torch version), which is private to its family.

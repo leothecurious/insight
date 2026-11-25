@@ -6,7 +6,7 @@ defaults:
   - protocol: null
   - optional local: local
 
-# The run's folder holds weights_epoch_N.pt, config.json and config.yaml. weights: random plans nothing.
+# The run's folder holds <series>_epoch_N.pt, config.json and config.yaml. weights: random plans nothing.
 run: ???
 weights: ???
 

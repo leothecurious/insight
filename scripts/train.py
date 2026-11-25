@@ -19,6 +19,7 @@ from stable_pretraining.callbacks.queue import OnlineQueue
 from stable_worldmodel.wm.utils import save_pretrained
 
 from insight.callbacks import PairCosines
+from insight.checkpoints import filename as checkpoint_filename
 from insight.data.build import build
 from insight.metrics import pairs
 
@@ -28,9 +29,10 @@ ROOT = Path(__file__).resolve().parents[1]
 class SaveWeights(Callback):
     """Save portable model weights and their Hydra configs at selected epochs."""
 
-    def __init__(self, run, configs, epochs, cache_dir):
+    def __init__(self, run, series, configs, epochs, final_epoch, cache_dir):
         super().__init__()
-        self.run, self.configs, self.epochs, self.cache_dir = run, configs, epochs, cache_dir
+        self.run, self.series, self.configs = run, series, configs
+        self.epochs, self.final_epoch, self.cache_dir = epochs, final_epoch, cache_dir
 
     def on_train_epoch_end(self, trainer, pl_module):
         epoch = trainer.current_epoch + 1
@@ -42,7 +44,7 @@ class SaveWeights(Callback):
                 getattr(pl_module, name),
                 run_name=self.run if name == "model" else f"{self.run}/{name}",
                 config=config,
-                filename=f"weights_epoch_{epoch}.pt",
+                filename=checkpoint_filename(self.series, epoch, self.final_epoch),
                 cache_dir=self.cache_dir,
             )
 
@@ -167,8 +169,10 @@ def run(cfg):
     callbacks = [
         SaveWeights(
             cfg.run,
+            cfg.series,
             {"model": cfg.model, **cfg.loss.modules},
             cfg.checkpoint.epochs,
+            cfg.trainer.max_epochs,
             cache_dir=cfg.paths.runs,
         ),
     ]
@@ -216,7 +220,9 @@ def run(cfg):
     manager()
 
     if cfg.wandb.enabled:
-        weights = run_dir / f"weights_epoch_{cfg.trainer.max_epochs}.pt"
+        weights = run_dir / checkpoint_filename(
+            cfg.series, cfg.trainer.max_epochs, cfg.trainer.max_epochs
+        )
         wandb_logger.experiment.summary["checkpoint/sha256"] = hashlib.sha256(
             weights.read_bytes()
         ).hexdigest()
