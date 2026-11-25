@@ -1,0 +1,4 @@
+# @package _global_
+# Baseline on scripted demonstrations whose goal outline is sampled per episode.
+defaults:
+  - override /data: pusht_randgoal

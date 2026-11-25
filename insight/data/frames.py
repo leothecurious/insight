@@ -1,10 +1,12 @@
 """Draw frames from stored state rows with stable-envs.
 
 Following stable-envs' ``examples/lewm/state_render.py``, fill State fields from dataset rows and
-call ``env.render(state)``. Each leaf of the frame spec maps a range of a dataset column to one
-State field. During training, stable-pretraining calls this transform after batch transfer.
+call ``env.render(state)`` as a stable-pretraining GPU transform. Each leaf of the frame spec maps a
+range of a dataset column to one State field. During training, stable-pretraining calls this transform
+after batch transfer; the overlays of ``spec["nuisance"]`` are drawn on the rendered frames.
 """
 
+import hydra
 import stable_envs as snv
 import torch
 from stable_envs import get_field
@@ -15,12 +17,15 @@ class Frames(nn.Module):
     """Write ``(B, T, D)`` state columns into States and set ``batch["pixels"]`` to ``(B, T, 3, H, W)`` floats in [0, 1].
 
     Fields not named in ``spec["leaves"]`` keep their ``env.reset(seed=0)`` values, and the fields in
-    ``spec["zero"]`` are cleared. ``spec`` is a plain container.
+    ``spec["zero"]`` are cleared. ``spec`` is a plain container. The overlays of ``spec["nuisance"]``,
+    applied in order, read the dataset's ``ids`` columns (``{"episode": name, "step": name}``) of the batch.
     """
 
-    def __init__(self, spec):
+    def __init__(self, spec, ids):
         super().__init__()
         self.spec = spec
+        self.ids = ids
+        self.nuisance = [hydra.utils.instantiate(c) for c in (spec.get("nuisance") or {}).values()]
         self.leaves = [(v["leaf"], v["column"], *v["columns"]) for v in spec["leaves"].values()]
         self._env = self._template = None
         self._states = {}
@@ -58,7 +63,10 @@ class Frames(nn.Module):
         for leaf in self.spec.get("zero") or ():
             get_field(state, leaf).zero_()
         frames = env.render(state, size=self.spec["size"])
-        return frames.reshape(b, t, *frames.shape[-3:])
+        frames = frames.reshape(b, t, *frames.shape[-3:])
+        for overlay in self.nuisance:
+            frames = overlay(frames, batch[self.ids["episode"]], batch[self.ids["step"]])
+        return frames
 
     def columns(self, state):
         """Read the columns of a State, shaped ``(B, 1, D)``: the inverse of what ``draw`` writes."""

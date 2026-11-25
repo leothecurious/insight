@@ -1,4 +1,4 @@
-"""Plan with a trained model: ``uv run scripts/eval.py run=<run> weights=weights_epoch_N.pt``.
+"""Plan with a trained model: ``uv run scripts/eval.py run=<run> weights=<series>_epoch_N.pt``.
 
 Follows stable-worldmodel ``scripts/plan/eval_wm.py`` and stable-envs ``examples/lewm/eval.py``. The
 run's ``config.yaml`` gives the dataset, the frames, the action statistics and the planning units.
@@ -58,7 +58,10 @@ def run(cfg):
     rng = np.random.default_rng(cfg.seed)
     picked = np.sort(valid[rng.choice(len(valid), size=num_eval, replace=False)])
 
-    frames = Frames(OmegaConf.to_container(train.data.frames, resolve=True))
+    frames = Frames(
+        OmegaConf.to_container(train.data.frames, resolve=True),
+        OmegaConf.to_container(train.data.ids),
+    )
     world = swm.World(
         ENV_ID,
         num_envs=num_eval,

@@ -1,0 +1,4 @@
+# @package _global_
+# Baseline plus a corner square whose colour changes on every frame.
+defaults:
+  - /nuisance: tag_frame
