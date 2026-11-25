@@ -8,6 +8,7 @@ the validation file of ``sweep.score_files``, so selection never reads the test 
 """
 
 import json
+import math
 import shutil
 import time
 from pathlib import Path
@@ -73,7 +74,8 @@ def run(cfg):
             indent=1,
         )
     )
-    return probe["r"]
+    # Optuna fails a trial on NaN; a diverged run ranks last instead.
+    return probe["r"] if math.isfinite(probe["r"]) else float("inf")
 
 
 if __name__ == "__main__":
