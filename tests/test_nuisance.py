@@ -1,58 +1,44 @@
-import pytest
 import torch
-from stable_pretraining.data import dataset_stats
 from torch.utils.data import DataLoader
 from toy import build_toy_tworoom
 
 DEVICE = "cuda" if torch.cuda.is_available() else "cpu"
 
 
-def corner_colours(pixels):
-    """Colours of the tag pixel of every frame, as uint8 ``(B, T, 3)``."""
-    mean, std = (
-        torch.tensor(dataset_stats.ImageNet[k], device=pixels.device).view(1, 1, 3, 1, 1)
-        for k in ("mean", "std")
-    )
-    return ((pixels * std + mean)[..., 0, 0] * 255).round().to(torch.uint8)
-
-
-def render(tmp_path, monkeypatch, vary):
-    """Draw every clip of the toy TwoRoom set tagged by ``vary``."""
+def render_tags(tmp_path, monkeypatch, vary):
     train = build_toy_tworoom(tmp_path, monkeypatch, [f"+nuisance=tag_{vary}"])
-    batch = next(iter(DataLoader(train, batch_size=len(train))))
-    gpu_transform = train.dataset.gpu_transform.to(DEVICE)
-    batch = gpu_transform({k: v.to(DEVICE) for k, v in batch.items()})
-    return batch, train
+    raw = next(iter(DataLoader(train, batch_size=len(train))))
+    batch = {key: value.to(DEVICE) for key, value in raw.items()}
+    transform = train.dataset.gpu_transform.to(DEVICE)
+    colours = transform(dict(batch))["pixels"][..., 0, 0].cpu()
+
+    # A tag keyed by batch position would change when the clip is rendered alone.
+    single = transform({key: value[1:2] for key, value in batch.items()})
+    torch.testing.assert_close(single["pixels"][..., 0, 0].cpu(), colours[1:2], rtol=0, atol=0)
+    return raw, colours
 
 
-def test_episode_tag_is_constant_within_an_episode(tmp_path, monkeypatch):
-    """A colour keyed by clip position instead of by episode would differ between the frames of a clip."""
-    batch, _ = render(tmp_path, monkeypatch, "episode")
-    colours = corner_colours(batch["pixels"])
+def test_episode_tag_is_constant_across_clips(tmp_path, monkeypatch):
+    """Keying by row or clip would break the shared colour within an episode."""
+    batch, colours = render_tags(tmp_path, monkeypatch, "episode")
     assert (colours == colours[:, :1]).all()
     by_episode = {}
-    for e, c in zip(batch["ep_idx"][:, 0].tolist(), colours[:, 0].tolist()):
-        assert by_episode.setdefault(e, c) == c
-    assert len({tuple(c) for c in by_episode.values()}) == len(by_episode) > 1
+    for episode, colour in zip(batch["ep_idx"][:, 0].tolist(), colours[:, 0].tolist()):
+        colour = tuple(colour)
+        assert by_episode.setdefault(episode, colour) == colour
+    assert len(set(by_episode.values())) == len(by_episode) > 1
 
 
 def test_frame_tag_follows_the_dataset_row(tmp_path, monkeypatch):
-    """Overlapping clips share rows at different positions: a colour keyed by position would differ."""
-    batch, _ = render(tmp_path, monkeypatch, "frame")
-    colours = corner_colours(batch["pixels"])
+    """Overlapping clips show the same row at different clip positions."""
+    batch, colours = render_tags(tmp_path, monkeypatch, "frame")
     by_row = {}
-    for e, s, c in zip(
-        batch["ep_idx"].flatten(), batch["step_idx"].flatten(), colours.flatten(0, 1)
+    for episode, step, colour in zip(
+        batch["ep_idx"].flatten().tolist(),
+        batch["step_idx"].flatten().tolist(),
+        colours.flatten(0, 1).tolist(),
     ):
-        assert by_row.setdefault((int(e), int(s)), tuple(c.tolist())) == tuple(c.tolist())
+        colour = tuple(colour)
+        assert by_row.setdefault((episode, step), colour) == colour
+    assert len(by_row) < colours.shape[0] * colours.shape[1]
     assert len(set(by_row.values())) == len(by_row)
-
-
-@pytest.mark.parametrize("vary", ["episode", "frame"])
-def test_tag_colours_do_not_depend_on_the_batch(tmp_path, monkeypatch, vary):
-    """Drawing clips one at a time must give the colours of drawing them together."""
-    batch, train = render(tmp_path, monkeypatch, vary)
-    raw = next(iter(DataLoader(train, batch_size=len(train))))
-    for i in (0, 7, len(train) - 1):
-        single = train.dataset.gpu_transform({k: v[i : i + 1].to(DEVICE) for k, v in raw.items()})
-        assert (corner_colours(single["pixels"])[0] == corner_colours(batch["pixels"])[i]).all()
