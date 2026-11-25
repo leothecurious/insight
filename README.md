@@ -46,6 +46,8 @@ uv run scripts/measure.py run=lewm_tworoom_s0 weights=lewm_tworoom_epoch_100.pt
 
 The TwoRoom evaluation preset uses one context frame and leaves the checkpoint's training history intact. Set `num_eval=200` to match the episode count used in our TwoRoom reproduction.
 
+To search hyperparameters at random, run `scripts/sweep.py` with Hydra's multirun and a `sweep` config of the arm: `uv run scripts/sweep.py -m +experiment=sobal_dot/reconstruction_clean +sweep=reconstruction`. Each trial trains a run and returns the rollout probe's `r` on a validation file, so the search never reads the test file.
+
 Evaluation writes `eval_results.jsonl`. Measurement fits state probes on training episodes, scores them on validation episodes, and writes `measure_results.jsonl`. Use `latents_path` to reuse encodings from the same checkpoint and sampled windows. Use `weights=random` to measure an untrained model or evaluate a random-action policy.
 
 For matched training runs, pass the same `+data.split.seed=0` to reserve the same episodes and use the same dataset and measurement window settings. Measurement uses the checkpoint's saved split. Select `embedding=backbone_cls` to read pre-projector CLS features. For example, measure effective rank on up to 4,000 held-out frames with `'metrics=[{name:rank_spectrum,validation_only:true,max_frames:4000}]'`.

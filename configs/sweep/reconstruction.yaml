@@ -1,0 +1,13 @@
+# @package _global_
+# The MSE reconstruction arm. Learning rate and effective batch, as micro-batches of 64 and 1 to 8 of them per
+# step (their dataset_batch_size is 64 to 512).
+defaults:
+  - base
+  - _self_
+
+hydra:
+  sweeper:
+    params:
+      optimizer.lr: tag(log, interval(5e-5, 5e-3))
+      accumulation: choice(1, 2, 4, 8)
+loader: {batch_size: 64}

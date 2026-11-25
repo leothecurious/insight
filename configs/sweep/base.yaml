@@ -1,0 +1,29 @@
+# @package _global_
+# Random search after Sobal et al. (arXiv 2211.10831, A.9): random configurations per noise setting, the best
+# rerun for 3 seeds. A sweep is the experiment of a setting plus the file of an arm:
+#   uv run scripts/sweep.py -m +experiment=sobal_dot/reconstruction_clean +sweep=reconstruction
+# Each trial trains a run, fits the rollout probe on the probe file and scores it on the validation file; the
+# returned value is its r, which Hydra's Optuna sweeper minimizes over RandomSampler draws. A cheaper trial
+# trains on a smaller recorded file (data.dataset.name=<file>).
+# The released code (vladisai/JEPA_SSL_NeurIPS_2022 at 03eb1730) holds no sweep script. The ranges are read off
+# its best configs, reproduce_configs/*.rssm.best.yaml: learning_rate (line 54) from 7.3e-5 to 3.7e-3, min_var
+# (line 57) in {0, 0.02, 0.05, 0.1}, dataset_batch_size (line 21) in {64, 128, 256, 512}.
+defaults:
+  - override /hydra/sweeper: optuna
+  - override /hydra/sweeper/sampler: random
+  - _self_
+
+hydra:
+  sweeper:
+    sampler:
+      seed: 0
+    direction: minimize
+    n_trials: 100
+    n_jobs: 1
+
+run: ${eval:'"${hydra:runtime.choices.experiment}".rsplit("/", 1)[-1]'}_hp${hydra:job.num}_s${seed}
+checkpoint: {epochs: [1], steps: null}
+sweep:
+  score_files: [dot1m_probe.h5, dot1m_val.h5]
+  measure_experiments: [sobal_dot/measure]
+  keep_runs: false

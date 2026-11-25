@@ -1,0 +1,13 @@
+# @package _global_
+# The RSSM reconstruction arm: learning rate, min_var, and an effective batch of 64 to 512 as 1 to 8 micro-batches of
+# the experiment's size (64; lower loader.batch_size if the GPU cannot hold it).
+defaults:
+  - base
+  - _self_
+
+hydra:
+  sweeper:
+    params:
+      optimizer.lr: tag(log, interval(5e-5, 5e-3))
+      accumulation: choice(1, 2, 4, 8)
+      model.min_var: choice(0.0, 0.02, 0.05, 0.1)

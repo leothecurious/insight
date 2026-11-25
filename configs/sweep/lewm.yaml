@@ -1,0 +1,13 @@
+# @package _global_
+# The LeWM arm: learning rate, effective batch of 128 to 512, and the SIGReg weight, which plays the role of the
+# JEPA baselines' loss coefficients in their search.
+defaults:
+  - base
+  - _self_
+
+hydra:
+  sweeper:
+    params:
+      optimizer.lr: tag(log, interval(5e-5, 5e-3))
+      accumulation: choice(1, 2, 4)
+      loss.forward.sigreg_weight: tag(log, interval(0.01, 1.0))
