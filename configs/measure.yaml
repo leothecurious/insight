@@ -8,6 +8,9 @@ defaults:
 run: ???
 weights: ???
 latents_path: null # reuse saved latents instead of encoding
+# Replaces data.measure.files: the file that fits the probes, then the file that scores them. Selecting
+# hyperparameters scores a validation file, never the test file.
+files: null
 wandb: true # write the results to the run's W&B summary when the run used W&B
 
 paths:

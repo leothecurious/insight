@@ -83,8 +83,8 @@ def measure_colour(cfg, train, model, ds):
     )
 
 
-@hydra.main(version_base=None, config_path="../configs", config_name="measure")
-def run(cfg):
+def measure(cfg):
+    """Measure a trained run and return its metrics."""
     if cfg.get("pred_copy") and cfg.embedding != "projector":
         raise ValueError("pred_copy requires embedding=projector")
     run_dir = Path(swm.data.utils.get_cache_dir(cfg.paths.runs, sub_folder="checkpoints"), cfg.run)
@@ -105,7 +105,7 @@ def run(cfg):
     latents_path = run_dir / f"{stem}_latents.pt"
 
     start = time.perf_counter()
-    train_set, val_set = build(train.data, train.seed, train.data.measure.get("files"))
+    train_set, val_set = build(train.data, train.seed, cfg.files or train.data.measure.get("files"))
     lat = get_latents(cfg, train, model, latents_path, train_set, val_set)
     metrics = suite.run(lat, OmegaConf.to_container(cfg.metrics, resolve=True))
     if cfg.get("pred_copy"):
@@ -133,7 +133,10 @@ def run(cfg):
 
         with wandb.init(**OmegaConf.to_container(train.wandb.config, resolve=True)) as wb:
             wb.summary[f"measure/{stem}"] = metrics
+    return metrics
 
+
+run = hydra.main(version_base=None, config_path="../configs", config_name="measure")(measure)
 
 if __name__ == "__main__":
     run()
