@@ -18,7 +18,7 @@ from omegaconf import OmegaConf, open_dict
 from stable_pretraining.callbacks.queue import OnlineQueue
 from stable_worldmodel.wm.utils import save_pretrained
 
-from insight.callbacks import GapCallback, PairCosines
+from insight.callbacks import PairCosines
 from insight.checkpoints import filename as checkpoint_filename
 from insight.data.build import build
 from insight.metrics import pairs
@@ -191,7 +191,6 @@ def run(cfg):
             cache_dir=cfg.paths.runs,
             steps=cfg.checkpoint.steps,
         ),
-        GapCallback(),
     ]
     if cfg.pairs:
         frames, tag = pairs.stamping(
