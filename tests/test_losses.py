@@ -79,27 +79,19 @@ def rssm_module():
 
 
 def test_rssm_posterior_learns_only_from_the_kl_above_the_free_nats():
-    """The posterior is trained by the KL alone because samples are not reparameterized; the floor
-    removes the KL's gradient below it. With ``reparameterize`` the reconstruction trains it as well. Sampling
-    with ``rsample`` by default, or taking the KL's minimum instead of its maximum with the floor, would train
-    the posterior with no error."""
+    """The posterior is trained by the KL alone because the samples carry no gradient; the floor
+    removes the KL's gradient below it. Taking the KL's minimum instead of its maximum with the floor
+    would train the posterior with no error."""
     from insight.losses.reconstruction_rssm import reconstruction_rssm
 
-    def posterior_grad(free_nats, reparameterize=False):
+    def posterior_grad(free_nats):
         torch.manual_seed(0)
         module = rssm_module()
         batch = {"pixels": torch.randn(B, 4, 3, 2, 2), "action": torch.randn(B, 4, 2)}
-        output = reconstruction_rssm(
-            module,
-            batch,
-            "fit",
-            free_nats=free_nats,
-            reparameterize=reparameterize,
-        )
+        output = reconstruction_rssm(module, batch, "fit", free_nats=free_nats)
         output["loss"].backward()
         grads = [p.grad for p in module.model.posterior_mu.parameters()]
         return sum(g.abs().sum() for g in grads if g is not None)
 
     assert posterior_grad(free_nats=1e6) == 0
     assert posterior_grad(free_nats=0.0) > 0
-    assert posterior_grad(free_nats=1e6, reparameterize=True) > 0

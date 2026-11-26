@@ -5,8 +5,8 @@ Every frame of the window is encoded. ``h`` starts as the first frame's embeddin
 window's actions, taking the previous step's ``z``: the first ``z`` is a prior sample, later ones are posterior
 samples of the frame just seen. Each frame is decoded from a prior sample and ``h``. The loss adds the
 KL(prior || posterior) of each step, its batch and dimension mean floored at ``free_nats``. Their samples
-(``.sample()``, rssm.py:264) carry no gradient, so the heads learn only from KL terms above the floor;
-``reparameterize`` draws them with ``rsample`` instead. The latent terms are logged on validation only.
+(``.sample()``, rssm.py:264) carry no gradient, so the heads learn only from KL terms above the floor.
+The latent terms are logged on validation only.
 """
 
 import torch
@@ -15,18 +15,15 @@ from torch.distributions import kl_divergence
 from insight.losses.common import log_step
 
 
-def reconstruction_rssm(self, batch, stage, *, free_nats, reparameterize=False):
+def reconstruction_rssm(self, batch, stage, *, free_nats):
     """Pixel error of every frame decoded from ``(z, h)``, plus the floored KL of each later step."""
     batch["action"] = torch.nan_to_num(batch["action"], 0.0)
     output = self.model.encode(batch)
     emb, act_emb = output["emb"], output["act_emb"]
     n_frames = emb.shape[1]
 
-    def draw(dist):
-        return dist.rsample() if reparameterize else dist.sample()
-
     h = emb[:, 0]
-    z = draw(self.model.prior(h))
+    z = self.model.prior(h).sample()
     beliefs, states, kls = [h], [z], []
     for t in range(n_frames - 1):
         h = self.model.step(h, act_emb[:, t], z)
@@ -34,8 +31,8 @@ def reconstruction_rssm(self, batch, stage, *, free_nats, reparameterize=False):
         posterior = self.model.posterior(emb[:, t + 1], h)
         kls.append(kl_divergence(prior, posterior).mean())
         beliefs.append(h)
-        states.append(draw(prior))
-        z = draw(posterior)
+        states.append(prior.sample())
+        z = posterior.sample()
     beliefs = torch.stack(beliefs, 1)
     kls = torch.stack(kls)
 

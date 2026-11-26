@@ -2,7 +2,6 @@ forward:
   _target_: insight.losses.reconstruction_rssm.reconstruction_rssm
   _partial_: true
   free_nats: 3.0
-  reparameterize: false # rsample for the training samples; their code uses sample (rssm.py:264)
 regularizers:
   sigreg:
     _target_: stable_worldmodel.wm.loss.SIGReg
