@@ -19,7 +19,7 @@ Portable model and loss-module checkpoints use the run's `series` as a globally 
 | `lewm_tworoom_nobn_s1` | LeWM on TwoRoom without the projector's BatchNorm |
 | `lewm_pusht_lr3e-4_s0` | Learning-rate sweep arm at 3e-4 |
 | `lewm_pusht_ep10_s0` | Training-length sweep arm at 10 epochs; final file `lewm_pusht_ep10.pt` |
-| `lewm_dot_noiseepisode_s1` | LeWM on the moving dot with per-episode noise |
+| `lewm_dotsc_noiseepisode_s1` | LeWM on the moving dot at the settings of Sobal et al.'s code, with noise fixed per episode |
 
 W&B never reuses a deleted run id, so a run that is retrained after its W&B run was deleted takes a new name.
 
