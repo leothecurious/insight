@@ -50,4 +50,4 @@ def reconstruction_rssm(self, batch, stage, *, history_size, free_nats, reparame
     output["loss"] = (n_frames * output["pixel_loss"] + kls.clamp(min=free_nats).sum()) / (
         n_frames - 1
     )
-    return log_step(self, stage, output, emb, history_size, 1)
+    return log_step(self, stage, output, emb)

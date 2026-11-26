@@ -32,4 +32,4 @@ def lewm(
     output["pred_loss"] = (pred_emb - emb[:, num_preds:]).pow(2).mean()
     output["sigreg_loss"] = self.sigreg(emb.transpose(0, 1))
     output["loss"] = output["pred_loss"] + sigreg_weight * output["sigreg_loss"]
-    return log_step(self, stage, output, emb, history_size, num_preds)
+    return log_step(self, stage, output, emb)

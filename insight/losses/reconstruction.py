@@ -36,4 +36,4 @@ def reconstruction(self, batch, stage, *, history_size):
         (pred_pixels - batch["pixels"][:, 1:].flatten(0, 1).float()).pow(2).mean()
     )
     output["loss"] = output["pixel_loss"]
-    return log_step(self, stage, output, emb, history_size, 1)
+    return log_step(self, stage, output, emb)
