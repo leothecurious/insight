@@ -70,7 +70,8 @@ def _resume_config(cfg):
     return config
 
 
-def train(cfg):
+@hydra.main(version_base=None, config_path="../configs", config_name="train")
+def run(cfg):
     run_dir = Path(swm.data.utils.get_cache_dir(cfg.paths.runs, "checkpoints"), cfg.run).resolve()
     config_path = run_dir / "config.yaml"
     resume = cfg.resume
@@ -242,8 +243,6 @@ def train(cfg):
             weights.read_bytes()
         ).hexdigest()
 
-
-run = hydra.main(version_base=None, config_path="../configs", config_name="train")(train)
 
 if __name__ == "__main__":
     run()
