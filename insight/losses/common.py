@@ -1,4 +1,4 @@
-"""Logging the objectives share, ported from le-wm PR #8 (``lewm_forward`` in ``train.py``)."""
+"""The logging and monitor embeddings that the LeWM and reconstruction objectives share."""
 
 
 def log_step(self, stage, output, emb, history_size, num_preds):
