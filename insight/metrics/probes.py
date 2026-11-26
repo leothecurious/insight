@@ -8,7 +8,6 @@ shuffled targets, so 0 is exact decoding and 100 matches that baseline's error.
 """
 
 import numpy as np
-import torch
 from scipy.stats import pearsonr
 from sklearn.linear_model import LinearRegression, RidgeCV
 from sklearn.metrics import r2_score
@@ -41,41 +40,6 @@ def fit_probe(kind, X, y, seed=0):
     if y.ndim == 2 and y.shape[1] == 1:
         y = y[:, 0]
     return make_pipeline(StandardScaler(), head).fit(X, y)
-
-
-class StreamedLinear:
-    """``fit_probe("linear")`` fit over row chunks: OLS with intercept on standardized X.
-
-    ``chunks()`` returns an iterator of ``(X, y)`` arrays and is read twice, once for the means and
-    scales and once for the centered normal equations, so memory grows with the feature count and
-    not with the number of rows. Accumulation is float64. The pseudoinverse of the Gram matrix
-    can discard weaker directions than a direct least-squares solve.
-    """
-
-    def __init__(self, chunks, device=None):
-        self.device = torch.device(device or ("cuda" if torch.cuda.is_available() else "cpu"))
-        n, sx, sxx, sy = 0, 0.0, 0.0, 0.0
-        for X, y in chunks():
-            X, y = self._tensors(X, y)
-            n += len(X)
-            sx, sxx, sy = sx + X.sum(0), sxx + (X * X).sum(0), sy + y.sum(0)
-        self.x_mean, self.y_mean = sx / n, sy / n
-        scale = (sxx / n - self.x_mean**2).clamp_min(0).sqrt()
-        self.x_scale = torch.where(scale < 10 * torch.finfo(scale.dtype).eps, 1.0, scale)
-        gram, cross = 0.0, 0.0
-        for X, y in chunks():
-            X, y = self._tensors(X, y)
-            X = (X - self.x_mean) / self.x_scale
-            gram, cross = gram + X.T @ X, cross + X.T @ (y - self.y_mean)
-        self.coef = torch.linalg.pinv(gram, hermitian=True) @ cross
-
-    def _tensors(self, X, y):
-        X, y = (torch.as_tensor(a, dtype=torch.float64, device=self.device) for a in (X, y))
-        return X, y.reshape(len(X), -1)
-
-    def predict(self, X):
-        X = torch.as_tensor(X, dtype=torch.float64, device=self.device)
-        return (((X - self.x_mean) / self.x_scale) @ self.coef + self.y_mean).cpu().numpy()
 
 
 def windowed(z, n, t, width):

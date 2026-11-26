@@ -82,10 +82,10 @@ def state_probe(
     return out
 
 
-def rollout_probe(lat, max_train=None, max_test=None, seed=0, chunk=1 << 18):
+def rollout_probe(lat, max_train=None, max_test=None, seed=0):
     """Joint linear position readout shared across all open-loop timesteps.
 
-    The readout is fit over chunks of ``chunk`` frames, so every train frame can be used.
+    The linear readout is fit in float64, since a float32 fit inflates r.
 
     Dot coordinates are fractions of the image side length. The paper-style
     summary averages timestep Euclidean RMSEs, rather than pooling frames.
@@ -102,14 +102,14 @@ def rollout_probe(lat, max_train=None, max_test=None, seed=0, chunk=1 << 18):
         raise ValueError("rollout_probe requires valid train and test frames")
     predicted_z, target = lat.predicted_z.numpy(), lat.target.numpy()[:, :, columns]
 
-    def train_chunks():
-        for i in range(0, len(tr), chunk):
-            rows = tr[i : i + chunk]
-            yield predicted_z[n[rows], t[rows]], target[n[rows], t[rows]]
-
-    probe = probes.StreamedLinear(train_chunks)
+    probe = probes.fit_probe(
+        "linear",
+        predicted_z[n[tr], t[tr]].astype(np.float64),
+        target[n[tr], t[tr]],
+    )
     y = target[n[te], t[te]]
-    squared_error = ((probe.predict(predicted_z[n[te], t[te]]) - y) ** 2).sum(axis=1)
+    prediction = probe.predict(predicted_z[n[te], t[te]].astype(np.float64))
+    squared_error = ((prediction - y) ** 2).sum(axis=1)
     center_squared_error = ((0.5 - y) ** 2).sum(axis=1)
     test_t = t[te]
     counts = [int((test_t == step).sum()) for step in range(lat.valid.shape[1])]
