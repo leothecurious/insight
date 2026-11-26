@@ -1,7 +1,6 @@
 forward:
   _target_: insight.losses.reconstruction.reconstruction
   _partial_: true
-  history_size: ${wm.history_size}
 regularizers:
   sigreg:
     _target_: stable_worldmodel.wm.loss.SIGReg

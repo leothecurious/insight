@@ -11,7 +11,7 @@ import torch
 from insight.losses.common import log_step
 
 
-def reconstruction(self, batch, stage, *, history_size):
+def reconstruction(self, batch, stage):
     """Pixel error of the open-loop rollout from the first frame, decoded at every later frame."""
     batch["action"] = torch.nan_to_num(batch["action"], 0.0)
     validating = stage == "validate"

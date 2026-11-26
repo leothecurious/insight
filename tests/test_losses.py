@@ -34,7 +34,7 @@ def test_reconstruction_trains_the_encoder_through_the_rollout_of_the_first_fram
         sigreg=SIGReg(knots=5, num_proj=8),
         log_dict=lambda *a, **k: None,
     )
-    output = reconstruction(module, batch, "fit", history_size=1)
+    output = reconstruction(module, batch, "fit")
 
     grad_first, grad_rest = torch.autograd.grad(output["loss"], [first, rest], allow_unused=True)
     assert grad_first.abs().sum() > 0
@@ -93,7 +93,6 @@ def test_rssm_posterior_learns_only_from_the_kl_above_the_free_nats():
             module,
             batch,
             "fit",
-            history_size=1,
             free_nats=free_nats,
             reparameterize=reparameterize,
         )

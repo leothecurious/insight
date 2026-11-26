@@ -15,7 +15,7 @@ from torch.distributions import kl_divergence
 from insight.losses.common import log_step
 
 
-def reconstruction_rssm(self, batch, stage, *, history_size, free_nats, reparameterize=False):
+def reconstruction_rssm(self, batch, stage, *, free_nats, reparameterize=False):
     """Pixel error of every frame decoded from ``(z, h)``, plus the floored KL of each later step."""
     batch["action"] = torch.nan_to_num(batch["action"], 0.0)
     output = self.model.encode(batch)
