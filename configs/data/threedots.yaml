@@ -1,0 +1,31 @@
+# 3-dots (insight.envs.three_dots) recorded by scripts/collect.py data=threedots; see experiment/sobal_threedots
+# for the model settings that go with it. The action column holds the action dot's moves only.
+dataset:
+  name: threedots1m_train.h5
+  frameskip: 1
+  num_steps: ${eval:'${wm.history_size} + ${wm.num_preds}'}
+  keys_to_load: [action, state, episode_idx, step_idx]
+  keys_to_cache: ${.keys_to_load}
+ids: {episode: episode_idx, step: step_idx}
+normalize: [action]
+split: {val: {name: threedots1m_val.h5}}
+frames:
+  env: ThreeDots
+  size: ${img_size}
+  leaves:
+    action_dot: {leaf: action_dot.position, column: state, columns: [0, 2]}
+    random_dot: {leaf: random_dot.position, column: state, columns: [2, 4]}
+    fixed_dot: {leaf: fixed_dot.position, column: state, columns: [4, 6]}
+# Measure fits its probes on the windows of the first file and scores them on the second; the action
+# scalers still come from the training file.
+measure:
+  files: [threedots1m_probe.h5, threedots1m_test.h5]
+  columns:
+    - {column: state, dim: 6} # each dot's x and y, in units of the frame's side
+  targets:
+    - {name: action_dot_x, column: state, index: 0}
+    - {name: action_dot_y, column: state, index: 1}
+    - {name: random_dot_x, column: state, index: 2}
+    - {name: random_dot_y, column: state, index: 3}
+    - {name: fixed_dot_x, column: state, index: 4}
+    - {name: fixed_dot_y, column: state, index: 5}

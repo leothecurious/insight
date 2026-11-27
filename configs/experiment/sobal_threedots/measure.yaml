@@ -1,0 +1,14 @@
+# @package _global_
+# sobal_dot/measure with the rollout probe read per dot: each dot's r is its mean RMSE over that of a
+# predictor that always says the centre, from one readout fitted on all six coordinates.
+defaults:
+  - sobal_dot/measure
+
+metrics:
+  - name: rollout_probe
+    targets:
+      action: [action_dot_x, action_dot_y]
+      random: [random_dot_x, random_dot_y]
+      stationary: [fixed_dot_x, fixed_dot_y]
+  - {name: state_probe, groups: [state], kinds: [linear, mlp], windows: [1]}
+  - {name: rank_spectrum, frame: null, max_frames: 20000}
