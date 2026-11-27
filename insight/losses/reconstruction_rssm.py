@@ -4,7 +4,9 @@
 Every frame of the window is encoded. ``h`` starts as the first frame's embedding and is unrolled over the
 window's actions, taking the previous step's ``z``: the first ``z`` is a prior sample, later ones are posterior
 samples of the frame just seen. Each frame is decoded from a prior sample and ``h``. The loss adds the
-KL(prior || posterior) of each step, floored at ``free_nats``.
+KL(prior || posterior) of each step, floored at ``free_nats``. ``kl_floor_over`` sets what the floor applies
+to: ``dims_mean`` is the mean over batch and latent dimensions (their rssm.py:270-271), ``dims_sum`` the sum
+over latent dimensions and mean over the batch, as the free bits of Dreamer (Hafner et al.).
 Their code draws samples with ``.sample()`` (rssm.py:264), which carries no gradient; here they are the
 reparameterized samples (``rsample()``) of a standard RSSM, so the reconstruction error reaches the heads.
 The latent terms are logged on validation only.
@@ -16,12 +18,13 @@ from torch.distributions import kl_divergence
 from insight.losses.common import log_step
 
 
-def reconstruction_rssm(self, batch, stage, *, free_nats):
+def reconstruction_rssm(self, batch, stage, *, free_nats, kl_floor_over="dims_mean"):
     """Pixel error of every frame decoded from ``(z, h)``, plus the floored KL of each later step."""
     batch["action"] = torch.nan_to_num(batch["action"], 0.0)
     output = self.model.encode(batch)
     emb, act_emb = output["emb"], output["act_emb"]
     n_frames = emb.shape[1]
+    assert kl_floor_over in ("dims_mean", "dims_sum"), kl_floor_over
 
     h = emb[:, 0]
     z = self.model.prior(h).rsample()
@@ -30,7 +33,8 @@ def reconstruction_rssm(self, batch, stage, *, free_nats):
         h = self.model.step(h, act_emb[:, t], z)
         prior = self.model.prior(h, self.model.min_var)
         posterior = self.model.posterior(emb[:, t + 1], h)
-        kls.append(kl_divergence(prior, posterior).mean())
+        kl = kl_divergence(prior, posterior)
+        kls.append(kl.mean() if kl_floor_over == "dims_mean" else kl.sum(-1).mean())
         beliefs.append(h)
         states.append(prior.rsample())
         z = posterior.rsample()
