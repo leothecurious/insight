@@ -1,0 +1,13 @@
+forward:
+  _target_: insight.losses.reconstruction_rssm.reconstruction_rssm
+  _partial_: true
+  free_nats: 3.0
+regularizers:
+  sigreg:
+    _target_: stable_worldmodel.wm.loss.SIGReg
+modules:
+  decoder:
+    _target_: stable_pretraining.backbone.CNNImageDecoder
+    embed_dim: ${eval:'2 * ${embed_dim}'}
+    img_size: ${img_size}
+    start_size: 7

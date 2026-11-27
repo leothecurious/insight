@@ -5,6 +5,7 @@ list of them.
 
 Sources:
   state_probe   Gonzalez Laiz & Schneider, arXiv 2610.37588 (App. D)
+  rollout_probe Sobal et al., arXiv 2211.10831: the dot's position read from open-loop predictions
   rank_spectrum EpiWM worldmodel/analysis/probes.py (the-puzzler/epijepa@0d43616)
 """
 
@@ -72,13 +73,70 @@ def state_probe(
         control = probes.control_mae(state[tr], y[tr], state[te], y[te], angle, seed)
         res = {"control_mae": control, "n_train": len(tr), "n_test": len(te)}
         for w in windows:
-            X = probes.windowed(z, n, t, w)
+            X_tr, X_te = (probes.windowed(z, n[rows], t[rows], w) for rows in (tr, te))
             for kind in kinds:
                 res[f"{kind}_w{w}"] = probes.probe_errors(
-                    kind, X[tr], y[tr], X[te], y[te], angle, control, seed
+                    kind, X_tr, y[tr], X_te, y[te], angle, control, seed
                 )
         out[lat.target_names[j]] = res
     return out
+
+
+def rollout_probe(lat, max_train=None, max_test=None, seed=0):
+    """Joint linear position readout shared across all open-loop timesteps.
+
+    The linear readout is fit in float64, since a float32 fit inflates r.
+
+    Dot coordinates are fractions of the image side length. The paper-style
+    summary averages timestep Euclidean RMSEs, rather than pooling frames.
+    ``r`` is the mean RMSE over that of a predictor that always says the centre.
+    """
+    if lat.predicted_z is None:
+        raise ValueError("rollout_probe requires predicted_z from rollout extraction")
+    if any(lat.target_names.count(name) != 1 for name in ("dot_x", "dot_y")):
+        raise ValueError("rollout_probe requires unique dot_x and dot_y targets")
+    columns = [lat.target_names.index(name) for name in ("dot_x", "dot_y")]
+    n, t, side = _frames(lat)
+    tr, te = _split(side, max_train, max_test, seed)
+    if not len(tr) or not len(te):
+        raise ValueError("rollout_probe requires valid train and test frames")
+    predicted_z, target = lat.predicted_z.numpy(), lat.target.numpy()[:, :, columns]
+
+    probe = probes.fit_probe(
+        "linear",
+        predicted_z[n[tr], t[tr]].astype(np.float64),
+        target[n[tr], t[tr]],
+    )
+    y = target[n[te], t[te]]
+    prediction = probe.predict(predicted_z[n[te], t[te]].astype(np.float64))
+    squared_error = ((prediction - y) ** 2).sum(axis=1)
+    center_squared_error = ((0.5 - y) ** 2).sum(axis=1)
+    test_t = t[te]
+    counts = [int((test_t == step).sum()) for step in range(lat.valid.shape[1])]
+
+    def summarize(errors):
+        per_step = [
+            float(np.sqrt(errors[test_t == step].mean())) if count else None
+            for step, count in enumerate(counts)
+        ]
+        return {
+            "rmse_per_step": per_step,
+            "mean_rmse": float(np.mean([value for value in per_step if value is not None])),
+            "pooled_rmse": float(np.sqrt(errors.mean())),
+        }
+
+    model = summarize(squared_error)
+    center = summarize(center_squared_error)
+    return {
+        "units": "coordinate side length",
+        "n_train": len(tr),
+        "n_test": len(te),
+        "n_test_per_step": counts,
+        **model,
+        "center_control": center,
+        "r": model["mean_rmse"] / center["mean_rmse"],
+        "r_pooled": model["pooled_rmse"] / center["pooled_rmse"],
+    }
 
 
 def reverse_probe(
@@ -144,7 +202,7 @@ def rank_spectrum(lat, frame=None, top=32, max_frames=None, seed=0, validation_o
     }
 
 
-METRICS = {f.__name__: f for f in (state_probe, reverse_probe, rank_spectrum)}
+METRICS = {f.__name__: f for f in (state_probe, rollout_probe, reverse_probe, rank_spectrum)}
 
 
 def run(lat, metrics):

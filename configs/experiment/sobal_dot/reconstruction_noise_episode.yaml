@@ -1,0 +1,18 @@
+# @package _global_
+# Compared with reconstruction_clean: uniform noise fixed within an episode, at the 1.25 of their
+# fixed-noise config (reproduce_configs/sweep_fixed_uniform.(1.25).rssm.best.yaml:18).
+defaults:
+  - sobal_dot/base
+  - /nuisance: noise_episode
+  - override /loss: reconstruction
+
+wm:
+  num_preds: 16
+
+data:
+  frames:
+    nuisance:
+      noise:
+        alpha: 1.25
+checkpoint:
+  steps: [3906] # half of the 7,812 steps: one 17-frame window per sequence

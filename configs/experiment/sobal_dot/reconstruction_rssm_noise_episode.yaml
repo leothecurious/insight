@@ -1,0 +1,16 @@
+# @package _global_
+# Compared with reconstruction_noise_episode: the RSSM loss. Learning rate and min_var are those of their
+# fixed-noise config at 1.25 (sweep_fixed_uniform.(1.25).rssm.best.yaml).
+defaults:
+  - sobal_dot/rssm_base
+  - /nuisance: noise_episode
+
+data:
+  frames:
+    nuisance:
+      noise:
+        alpha: 1.25
+optimizer:
+  lr: 0.0021073859143605892
+model:
+  min_var: 0.02

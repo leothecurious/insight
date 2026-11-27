@@ -1,0 +1,25 @@
+# @package _global_
+# Compared with reconstruction_*: the loss and optimizer of Sobal et al.'s RSSM (vladisai/JEPA_SSL_NeurIPS_2022
+# at 03eb1730): a stochastic state with a KL term (rssm.py:240-290) and Adam at a constant learning rate
+# (train.py:228-232; the decay at train.py:249-255 never reaches the optimizer that steps), batch 256
+# (reproduce_configs/*.rssm.best.yaml), one pass over the 1M sequences in 3,906 steps, gradient clip 1000
+# (train.py:268). Their code trains in fp32.
+defaults:
+  - base
+  - override /model: lewm_rssm
+  - override /loss: reconstruction_rssm
+
+wm:
+  num_preds: 16
+loader:
+  batch_size: 64
+accumulation: 4 # batch 256 as four micro-batches, which fit on the GPU
+optimizer:
+  type: Adam
+  weight_decay: 0.0
+schedule: constant
+trainer:
+  precision: 32-true
+  gradient_clip_val: 1000
+checkpoint:
+  steps: [1953] # half of the 3,906 steps

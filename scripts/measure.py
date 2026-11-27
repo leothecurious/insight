@@ -39,8 +39,9 @@ def get_latents(cfg, train, model, path, train_set, val_set):
     out = extract(
         model,
         loader,
-        train_set.dataset.gpu_transform,
+        data.side(train_set)[0].gpu_transform,
         cfg.windows.precision,
+        cfg.windows.rollout,
         embedding=cfg.embedding,
     )
     lat = Latents(
@@ -97,21 +98,23 @@ def run(cfg):
     else:
         model = swm.wm.utils.load_pretrained(f"{cfg.run}/{cfg.weights}", cache_dir=cfg.paths.runs)
     model = model.to(cfg.device).eval().requires_grad_(False)
+    torch.manual_seed(cfg.seed)
     stem = Path(cfg.weights).stem
     if cfg.embedding != "projector":
         stem = f"{stem}_{cfg.embedding}"
     latents_path = run_dir / f"{stem}_latents.pt"
 
     start = time.perf_counter()
-    train_set, val_set = build(train.data, train.seed)
+    train_set, val_set = build(train.data, train.seed, train.data.measure.get("files"))
     lat = get_latents(cfg, train, model, latents_path, train_set, val_set)
     metrics = suite.run(lat, OmegaConf.to_container(cfg.metrics, resolve=True))
     if cfg.get("pred_copy"):
         metrics["pred_copy"] = predictor.measure(model, lat, **cfg.pred_copy)
+    dataset = data.side(train_set)[0]
     if cfg.get("pairs"):
-        metrics["pairs"] = measure_pairs(cfg, train, model, train_set.dataset)
+        metrics["pairs"] = measure_pairs(cfg, train, model, dataset)
     if cfg.get("colour"):
-        metrics["colour_probe"] = measure_colour(cfg, train, model, train_set.dataset)
+        metrics["colour_probe"] = measure_colour(cfg, train, model, dataset)
     seconds = time.perf_counter() - start
 
     print(json.dumps(metrics, indent=1))

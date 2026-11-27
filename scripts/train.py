@@ -27,26 +27,35 @@ ROOT = Path(__file__).resolve().parents[1]
 
 
 class SaveWeights(Callback):
-    """Save portable model weights and their Hydra configs at selected epochs."""
+    """Save portable weights at configured optimizer steps and epochs."""
 
-    def __init__(self, run, series, configs, epochs, final_epoch, cache_dir):
+    def __init__(self, run, series, configs, epochs, final_epoch, cache_dir, steps=None):
         super().__init__()
         self.run, self.series, self.configs = run, series, configs
         self.epochs, self.final_epoch, self.cache_dir = epochs, final_epoch, cache_dir
+        self.steps = set(steps or ())
+
+    def save(self, pl_module, filename):
+        for name, config in self.configs.items():
+            save_pretrained(
+                getattr(pl_module, name),
+                run_name=self.run if name == "model" else f"{self.run}/{name}",
+                config=config,
+                filename=filename,
+                cache_dir=self.cache_dir,
+            )
+
+    def on_train_batch_end(self, trainer, pl_module, outputs, batch, batch_idx):
+        if trainer.global_step in self.steps and trainer.is_global_zero:
+            self.steps.discard(trainer.global_step)
+            self.save(pl_module, f"{self.series}_step_{trainer.global_step}.pt")
 
     def on_train_epoch_end(self, trainer, pl_module):
         epoch = trainer.current_epoch + 1
         keep = self.epochs is None or epoch in self.epochs or epoch == trainer.max_epochs
         if not (keep and trainer.is_global_zero):
             return
-        for name, config in self.configs.items():
-            save_pretrained(
-                getattr(pl_module, name),
-                run_name=self.run if name == "model" else f"{self.run}/{name}",
-                config=config,
-                filename=checkpoint_filename(self.series, epoch, self.final_epoch),
-                cache_dir=self.cache_dir,
-            )
+        self.save(pl_module, checkpoint_filename(self.series, epoch, self.final_epoch))
 
 
 def _resume_config(cfg):
@@ -132,18 +141,24 @@ def run(cfg):
         for name, config in cfg.loss.get("regularizers", {}).items()
     }
 
-    total_steps = cfg.trainer.max_epochs * len(train)
-    optimizers = {}
-    for name in models:
-        optimizers[f"{name}_opt"] = {
-            "modules": name,
+    # One optimizer over the model and the loss modules, so gradient clipping sees their joint norm.
+    total_steps = cfg.trainer.max_epochs * len(train) // cfg.accumulation
+    schedulers = {
+        "warmup_cosine": {
+            "type": "LinearWarmupCosineAnnealingLR",
+            "warmup_steps": max(1, int(0.01 * total_steps)),
+            "max_steps": total_steps,
+        },
+        "constant": {"type": "ConstantLR", "factor": 1.0},
+    }
+    optimizers = {
+        "model_opt": {
+            "modules": "|".join(models),
             "optimizer": dict(cfg.optimizer),
-            "scheduler": {
-                "type": "LinearWarmupCosineAnnealingLR",
-                "warmup_steps": max(1, int(0.01 * total_steps)),
-                "max_steps": total_steps,
-            },
+            "scheduler": schedulers[cfg.schedule],
+            "frequency": cfg.accumulation,
         }
+    }
 
     data_module = spt.data.DataModule(train=train, val=val)
     world_model = spt.Module(
@@ -174,6 +189,7 @@ def run(cfg):
             cfg.checkpoint.epochs,
             cfg.trainer.max_epochs,
             cache_dir=cfg.paths.runs,
+            steps=cfg.checkpoint.steps,
         ),
     ]
     if cfg.pairs:

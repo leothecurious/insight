@@ -52,10 +52,15 @@ optimizer:
   type: AdamW
   lr: 5e-5
   weight_decay: 1e-3
+# warmup_cosine: a 1% linear warmup, then cosine decay to zero over all steps. constant: the lr throughout.
+schedule: warmup_cosine
+# Micro-batches whose mean gradient one optimizer step applies, for batches too big for the GPU.
+accumulation: 1
 
-# Weights are saved at these epochs and the last one (null: every epoch).
+# Weights are saved at these epochs and the last one (null: every epoch), and after these optimizer steps.
 checkpoint:
   epochs: [5, 10]
+  steps: null
 
 # spt's RankMe of the embeddings at each validation, a training-time collapse monitor.
 monitor:

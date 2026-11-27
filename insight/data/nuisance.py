@@ -1,10 +1,11 @@
 """Nuisance overlays: seeded axes of a dataset, drawn on the uint8 frames right after ``env.render``.
 
 ``CornerSquare`` ports the corner tag of Enigma-Incorporated/The-Obsessed-Encoder@37819425
-(``pixel_tag.py``). Its colour is a pure function of
-``(seed, episode)`` or ``(seed, episode, step)``, so train, measure and eval draw the same colour for the
-same dataset row, independent of how rows are batched. The hash is the counter-based ``lowbias32`` of
-stable-envs ``envs/miniworld/simulation/rng.py`` (torch version), which is private to its family.
+(``pixel_tag.py``). ``UniformNoise`` implements the uniform pixel noise described by Sobal et al. (2022,
+arXiv 2211.10831, App. A.2). Their parameters are pure functions of ``(seed, episode)`` or
+``(seed, episode, step)``, so train, measure and eval draw the same overlay for the same dataset row,
+independent of how rows are batched. The hash is the counter-based ``lowbias32`` of stable-envs
+``envs/miniworld/simulation/rng.py`` (torch version), which is private to its family.
 """
 
 import torch
@@ -31,7 +32,8 @@ def mix(x):
 def draw(seed, episode, step, k):
     """32 random bits for draw ``k`` of the stream of ``(seed, episode[, step])``, as int64.
 
-    ``seed`` and ``k`` are ints; ``episode`` and ``step`` are int64 tensors of one shape, or ``step`` is None.
+    ``seed`` is an int; ``episode`` and ``step`` are int64 tensors of one shape, or ``step`` is None; ``k``
+    is an int or an int64 tensor that broadcasts against them.
     """
     base = mix(mix(mix((seed & _M32) ^ 0x3C6EF372) ^ ((seed >> 32) & _M32)) ^ (episode & _M32))
     if step is not None:
@@ -60,3 +62,32 @@ class CornerSquare:
         """Stamp ``(..., H, W, 3)`` uint8 ``frames`` in place and return them."""
         frames[..., : self.size, : self.size, :] = self.colour(episode, step)[..., None, None, :]
         return frames
+
+
+class UniformNoise:
+    """Blend uniform noise into every frame: ``(o + alpha * 255 * Z) / (1 + alpha)`` with Z in [0, 1).
+
+    Z is drawn per pixel and shared by the three channels. ``vary`` is ``episode`` (one pattern per
+    episode, so it is predictable from the past) or ``frame`` (a new pattern on every dataset row).
+    Dividing by ``1 + alpha`` keeps the frame in uint8 range at the paper's signal-to-noise ratio.
+    """
+
+    def __init__(self, alpha, vary="frame", seed=0):
+        assert vary in ("episode", "frame"), vary
+        self.alpha, self.vary, self.seed = alpha, vary, seed
+
+    def pattern(self, episode, step, height, width):
+        """Z of ``(..., H, W)`` for the int tensors of dataset ids ``episode`` and ``step``."""
+        pixel = torch.arange(height * width, device=episode.device)
+        step = step.long()[..., None] if self.vary == "frame" else None
+        bits = draw(self.seed, episode.long()[..., None], step, pixel)
+        return (bits >> 8).float().div_(1 << 24).reshape(*episode.shape, height, width)
+
+    def __call__(self, frames, episode, step=None):
+        """Blend ``(B, T, H, W, 3)`` uint8 ``frames`` and return them."""
+        z = self.pattern(episode, step, *frames.shape[-3:-1])
+        return (
+            ((frames.float() + self.alpha * 255 * z[..., None]) / (1 + self.alpha))
+            .round()
+            .to(torch.uint8)
+        )

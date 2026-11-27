@@ -17,6 +17,8 @@ class Latents:
     target   (N, T, M)  probe targets in dataset units
     episode  (N,)       dataset episode of each window
     train    (N,)       probe-train side of the episode split
+    predicted_z (N, T, D) optional open-loop rollout from frame 0, including frame 0
+    embedding selected encoder output, projector or backbone_cls
     """
 
     z: torch.Tensor
@@ -28,6 +30,7 @@ class Latents:
     target_names: list
     target_angle: list
     target_group: list
+    predicted_z: torch.Tensor | None = None
     embedding: str = "projector"
 
     def save(self, path):
@@ -39,18 +42,25 @@ class Latents:
 
 
 @torch.inference_mode()
-def extract(model, loader, transform, precision="fp32", *, embedding="projector"):
+def extract(model, loader, transform, precision="fp32", rollout=False, *, embedding="projector"):
     """Draw and encode every frame of each window. Returns z, action and valid.
 
     ``transform`` is the dataset's ``gpu_transform``, which turns the state rows of a batch into
-    the normalized frames the model trained on.
+    the normalized frames the model trained on. ``embedding`` selects the projected embedding or
+    the backbone CLS token. With ``rollout``, the model also predicts each window from its first frame
+    and actions, and ``predicted_z`` holds the projected embeddings.
     """
     device = next(model.parameters()).device
     transform.to(device)
     dtype = PRECISION[precision]
     if embedding not in ("projector", "backbone_cls"):
         raise ValueError(f"unknown embedding layer: {embedding}")
+    if rollout and embedding != "projector":
+        raise ValueError("rollout extraction requires embedding=projector")
     out = {"z": [], "action": [], "valid": []}
+    if rollout:
+        assert model.predictor.num_frames == 1, "the rollout reads one context frame"
+        out["predicted_z"] = []
     for batch in loader:
         batch = {k: v.to(device, non_blocking=True) for k, v in batch.items()}
         pixels = transform(batch)["pixels"]
@@ -59,10 +69,16 @@ def extract(model, loader, transform, precision="fp32", *, embedding="projector"
                 z = _encode_backbone_cls(model, pixels)
             else:
                 z = model.encode({"pixels": pixels})["emb"]
+            if rollout:
+                # The last action leaves the window.
+                info = {"pixels": pixels[:, None, :1]}
+                predicted = model.rollout(info, batch["action"][:, None, :-1])
+                out["predicted_z"].append(predicted["predicted_emb"][:, 0].float().cpu())
         out["z"].append(z.float().cpu())
         out["action"].append(batch["action"].cpu())
         out["valid"].append(batch["valid"].cpu())
-    return {k: torch.cat(v) for k, v in out.items()}
+    # Pop each list as it is joined so the chunks and the joined tensor are never all held at once.
+    return {k: torch.cat(out.pop(k)) for k in list(out)}
 
 
 def _encode_backbone_cls(model, pixels):

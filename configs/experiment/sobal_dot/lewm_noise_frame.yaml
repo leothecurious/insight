@@ -1,0 +1,5 @@
+# @package _global_
+# Compared with lewm_clean: uniform noise redrawn every frame.
+defaults:
+  - sobal_dot/base
+  - /nuisance: noise_frame

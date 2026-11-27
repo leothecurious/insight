@@ -11,13 +11,11 @@ import stable_pretraining as spt
 import torch
 
 
-def sides(train, val):
-    """Dataset and the episodes of the training and validation sides of a ``build`` split."""
-    if not isinstance(train, spt.data.Subset) or not isinstance(val, spt.data.Subset):
-        raise NotImplementedError("measure needs the episode split of one dataset")
-    ds = train.dataset
-    episodes = [np.unique([ds.clip_indices[i][0] for i in s.indices]) for s in (train, val)]
-    return ds, *episodes
+def side(x):
+    """Dataset and episodes of one side of a ``build`` split: a ``Subset`` of an episode split, or a whole dataset."""
+    if isinstance(x, spt.data.Subset):
+        return x.dataset, np.unique([x.dataset.clip_indices[i][0] for i in x.indices])
+    return x, np.arange(len(x.lengths))
 
 
 def sample_windows(ds, episodes, num_frames, min_frames, start, n, seed):
@@ -109,39 +107,36 @@ def window_targets(ds, windows, num_frames, specs):
 
 
 def windows_loader(train, val, frame_columns, measure, w, seed):
-    """Loader over windows of the training and validation episodes, plus targets and split.
+    """Loader over windows of the training and validation sides, plus targets and split.
 
     ``train`` and ``val`` come from ``insight.data.build.build``; ``frame_columns`` are the columns
     the frames are drawn from and ``measure`` is the ``measure`` block of the data config. Windows of
-    training episodes come first, ``w.n_train`` of them, then ``w.n_val`` of validation episodes.
+    the training side come first, ``w.n_train`` of them, then ``w.n_val`` of the validation side.
     """
-    ds, train_eps, val_eps = sides(train, val)
-    for c in measure.columns:
-        dim = ds.get_dim(c.column)
-        assert dim == c.dim, f"{c.column} has {dim} dims, expected {c.dim}"
-    windows, is_train = [], []
-    for episodes, n, side in ((train_eps, w.n_train, True), (val_eps, w.n_val, False)):
-        picked = sample_windows(ds, episodes, w.frames, w.min_frames, w.start, n, seed)
-        windows += picked
-        is_train += [side] * len(picked)
-    dataset = Windows(ds, windows, w.frames, ["action", *frame_columns])
-    # Frames come from load_chunk and targets from row indices; they must name the same rows.
-    rows = window_rows(ds, windows, w.frames)
-    probes = {0, len(windows) // 2, int(np.argmin([n for _, _, n in windows]))}
-    for c in frame_columns:
-        column = ds.get_col_data(c)
-        for i in probes:
-            np.testing.assert_array_equal(dataset[i][c].numpy(), column[rows[i]])
+    sets, targets, episodes, is_train = [], [], [], []
+    for x, count, on_train_side in ((train, w.n_train, True), (val, w.n_val, False)):
+        ds, side_episodes = side(x)
+        for c in measure.columns:
+            dim = ds.get_dim(c.column)
+            assert dim == c.dim, f"{c.column} has {dim} dims, expected {c.dim}"
+        windows = sample_windows(ds, side_episodes, w.frames, w.min_frames, w.start, count, seed)
+        dataset = Windows(ds, windows, w.frames, ["action", *frame_columns])
+        # Frames come from load_chunk and targets from row indices; they must name the same rows.
+        rows = window_rows(ds, windows, w.frames)
+        probes = {0, len(windows) // 2, int(np.argmin([n for _, _, n in windows]))}
+        for c in frame_columns:
+            column = ds.get_col_data(c)
+            for i in probes:
+                np.testing.assert_array_equal(dataset[i][c].numpy(), column[rows[i]])
+        sets.append(dataset)
+        targets.append(window_targets(ds, windows, w.frames, measure.targets))
+        episodes += [w_[0] for w_ in windows]
+        is_train += [on_train_side] * len(windows)
     loader = torch.utils.data.DataLoader(
-        dataset,
+        torch.utils.data.ConcatDataset(sets),
         batch_size=w.batch_size,
         num_workers=w.num_workers,
         shuffle=False,
         pin_memory=torch.cuda.is_available(),
     )
-    return (
-        loader,
-        window_targets(ds, windows, w.frames, measure.targets),
-        np.array([w_[0] for w_ in windows]),
-        np.array(is_train),
-    )
+    return loader, np.concatenate(targets), np.array(episodes), np.array(is_train)

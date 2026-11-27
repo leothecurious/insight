@@ -1,0 +1,12 @@
+forward:
+  _target_: insight.losses.reconstruction.reconstruction
+  _partial_: true
+regularizers:
+  sigreg:
+    _target_: stable_worldmodel.wm.loss.SIGReg
+modules:
+  decoder:
+    _target_: stable_pretraining.backbone.CNNImageDecoder
+    embed_dim: ${embed_dim}
+    img_size: ${img_size}
+    start_size: 7 # img_size / start_size must be a power of two: 28 and 224 px frames
