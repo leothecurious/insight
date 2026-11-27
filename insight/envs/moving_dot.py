@@ -28,6 +28,7 @@ class MovingDot(snv.Env):
     state_names = ("dot_x", "dot_y")
     state_layout = ((("dot", "position"), 2, 0),)
     action_dim = 2
+    action_leaf = "dot.position"  # the State field the action moves
     action_low, action_high = -MAX_STEP, MAX_STEP
     default_size = 32
     MARGIN = MARGIN

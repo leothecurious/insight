@@ -1,4 +1,4 @@
-"""Record rollouts of the moving dot as swm state rows.
+"""Record rollouts of a toy environment (the moving dot, 3-dots) as swm state rows.
 
 stable-envs steps the batch of environments and the episodes are stored in stable-worldmodel's HDF5
 format (one dataset per column, plus ``ep_len`` and ``ep_offset``), which ``swm.data.load_dataset``
@@ -42,7 +42,7 @@ def collect(path, frames, policy, sequences, steps, seed, first_episode, chunk, 
             )
 
             # Action t must be the move from row t to row t + 1.
-            pos = snv.get_field(states, "dot.position")
+            pos = snv.get_field(states, env.action_leaf)
             moved = (pos[:, :-1] + actions).clamp(env.MARGIN, 1 - env.MARGIN)
             assert torch.equal(pos[:, 1:], moved)
 

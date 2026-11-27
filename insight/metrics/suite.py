@@ -5,7 +5,7 @@ list of them.
 
 Sources:
   state_probe   Gonzalez Laiz & Schneider, arXiv 2610.37588 (App. D)
-  rollout_probe Sobal et al., arXiv 2211.10831: the dot's position read from open-loop predictions
+  rollout_probe Sobal et al., arXiv 2211.10831: each dot's position read from open-loop predictions
   rank_spectrum EpiWM worldmodel/analysis/probes.py (the-puzzler/epijepa@0d43616)
 """
 
@@ -82,7 +82,22 @@ def state_probe(
     return out
 
 
-def rollout_probe(lat, max_train=None, max_test=None, seed=0):
+def _rollout_scores(prediction, y, test_t, steps):
+    """Per-step and pooled RMSE of ``(n, 2)`` position predictions, in the units of ``y``."""
+    squared_error = ((prediction - y) ** 2).sum(axis=1)
+    counts = [int((test_t == step).sum()) for step in range(steps)]
+    per_step = [
+        float(np.sqrt(squared_error[test_t == step].mean())) if count else None
+        for step, count in enumerate(counts)
+    ]
+    return {
+        "rmse_per_step": per_step,
+        "mean_rmse": float(np.mean([value for value in per_step if value is not None])),
+        "pooled_rmse": float(np.sqrt(squared_error.mean())),
+    }
+
+
+def rollout_probe(lat, max_train=None, max_test=None, seed=0, targets=None):
     """Joint linear position readout shared across all open-loop timesteps.
 
     The linear readout is fit in float64, since a float32 fit inflates r.
@@ -90,12 +105,20 @@ def rollout_probe(lat, max_train=None, max_test=None, seed=0):
     Dot coordinates are fractions of the image side length. The paper-style
     summary averages timestep Euclidean RMSEs, rather than pooling frames.
     ``r`` is the mean RMSE over that of a predictor that always says the centre.
+
+    ``targets`` maps a name to the ``(x, y)`` target names of one dot. It reads every dot from one
+    readout fitted on all their coordinates, as Sobal et al.'s 3-dots probe does (a linear readout's
+    outputs are independent). The result then has an entry per name, and ``average`` takes the mean of
+    the dots' RMSEs, over that of the centre predictor. Without ``targets`` the one dot is
+    ``dot_x``, ``dot_y`` and the result is its entry.
     """
     if lat.predicted_z is None:
         raise ValueError("rollout_probe requires predicted_z from rollout extraction")
-    if any(lat.target_names.count(name) != 1 for name in ("dot_x", "dot_y")):
-        raise ValueError("rollout_probe requires unique dot_x and dot_y targets")
-    columns = [lat.target_names.index(name) for name in ("dot_x", "dot_y")]
+    dots = {"dot": ("dot_x", "dot_y")} if targets is None else dict(targets)
+    names = [name for pair in dots.values() for name in pair]
+    if any(lat.target_names.count(name) != 1 for name in names):
+        raise ValueError(f"rollout_probe requires unique targets {names}")
+    columns = [lat.target_names.index(name) for name in names]
     n, t, side = _frames(lat)
     tr, te = _split(side, max_train, max_test, seed)
     if not len(tr) or not len(te):
@@ -109,34 +132,33 @@ def rollout_probe(lat, max_train=None, max_test=None, seed=0):
     )
     y = target[n[te], t[te]]
     prediction = probe.predict(predicted_z[n[te], t[te]].astype(np.float64))
-    squared_error = ((prediction - y) ** 2).sum(axis=1)
-    center_squared_error = ((0.5 - y) ** 2).sum(axis=1)
-    test_t = t[te]
-    counts = [int((test_t == step).sum()) for step in range(lat.valid.shape[1])]
-
-    def summarize(errors):
-        per_step = [
-            float(np.sqrt(errors[test_t == step].mean())) if count else None
-            for step, count in enumerate(counts)
-        ]
-        return {
-            "rmse_per_step": per_step,
-            "mean_rmse": float(np.mean([value for value in per_step if value is not None])),
-            "pooled_rmse": float(np.sqrt(errors.mean())),
+    centre = np.full_like(y, 0.5)
+    steps = lat.valid.shape[1]
+    results = {}
+    for i, name in enumerate(dots):
+        pair = slice(2 * i, 2 * i + 2)
+        model = _rollout_scores(prediction[:, pair], y[:, pair], t[te], steps)
+        center = _rollout_scores(centre[:, pair], y[:, pair], t[te], steps)
+        results[name] = {
+            "units": "coordinate side length",
+            "n_train": len(tr),
+            "n_test": len(te),
+            "n_test_per_step": [int((t[te] == step).sum()) for step in range(steps)],
+            **model,
+            "center_control": center,
+            "r": model["mean_rmse"] / center["mean_rmse"],
+            "r_pooled": model["pooled_rmse"] / center["pooled_rmse"],
         }
-
-    model = summarize(squared_error)
-    center = summarize(center_squared_error)
-    return {
-        "units": "coordinate side length",
-        "n_train": len(tr),
-        "n_test": len(te),
-        "n_test_per_step": counts,
-        **model,
-        "center_control": center,
-        "r": model["mean_rmse"] / center["mean_rmse"],
-        "r_pooled": model["pooled_rmse"] / center["pooled_rmse"],
+    if targets is None:
+        return results["dot"]
+    mean_rmse = float(np.mean([v["mean_rmse"] for v in results.values()]))
+    center_rmse = float(np.mean([v["center_control"]["mean_rmse"] for v in results.values()]))
+    results["average"] = {
+        "mean_rmse": mean_rmse,
+        "center_control": {"mean_rmse": center_rmse},
+        "r": mean_rmse / center_rmse,
     }
+    return results
 
 
 def reverse_probe(

@@ -1,0 +1,8 @@
+# @package _global_
+# Compared with sobal_dot/lewm_clean: the same model and budget on 3-dots frames instead of the single dot.
+# Reference, Sobal et al. Table 1 (VICReg RMSE on the action, random and stationary dot): 0.277, 0.273, 0.066
+# against 0.304, 0.304, 0.289 for the centre guess. Compare r, the ratio to the centre guess. Table 1's
+# RMSE is per coordinate, in units of the margin-to-margin range (its stationary centre guess is sqrt(1/12));
+# rollout_probe's raw RMSE divided by sqrt(2) * (1 - 2 * MARGIN) ≈ 1.142 is in that unit.
+defaults:
+  - sobal_threedots/base
