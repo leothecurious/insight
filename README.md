@@ -30,7 +30,7 @@ Library versions are pinned to exact commits in `pyproject.toml`; `uv.lock` fixe
 
 ## Data
 
-Datasets and checkpoints live under `$STABLEWM_HOME` (swm's default, `~/.stable_worldmodel/`). The LeWM releases (PushT, TwoRoom) are on [HuggingFace](https://huggingface.co/collections/quentinll/lewm); decompress with `tar --zstd -xvf archive.tar.zst`. The moving dot is recorded locally, in seconds: `uv run scripts/collect.py name=dot1m_train sequences=1000000 seed=10`, then `dot1m_val`, `dot1m_probe` and `dot1m_test` from seeds and `first_episode` ranges of their own (see `configs/collect.yaml`). 3-dots is recorded the same way with `data=threedots` and names `threedots1m_*`.
+Datasets and checkpoints live under `$STABLEWM_HOME` (swm's default, `~/.stable_worldmodel/`). The LeWM releases (PushT, TwoRoom) are on [HuggingFace](https://huggingface.co/collections/quentinll/lewm); decompress with `tar --zstd -xvf archive.tar.zst`. The moving dot is recorded locally, in seconds: `uv run scripts/collect.py name=dot1m_train sequences=1000000 seed=10`, then `dot1m_val` (seed 11, `first_episode=1000000`, 10,000 sequences), `dot1m_probe` (12, `1010000`, 300,000) and `dot1m_test` (13, `1310000`, 10,000). 3-dots is recorded the same way with `data=threedots` and names `threedots1m_*`.
 
 For machine-specific dataset and checkpoint locations, copy `configs/local/local.yaml.template` to `configs/local/local.yaml` and set the paths there.
 
