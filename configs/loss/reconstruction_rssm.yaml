@@ -2,6 +2,7 @@ forward:
   _target_: insight.losses.reconstruction_rssm.reconstruction_rssm
   _partial_: true
   free_nats: 3.0
+  kl_floor_over: dims_mean
 regularizers:
   sigreg:
     _target_: stable_worldmodel.wm.loss.SIGReg

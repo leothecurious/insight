@@ -41,7 +41,7 @@ def test_reconstruction_trains_the_encoder_through_the_rollout_of_the_first_fram
     assert grad_rest is None
 
 
-def rssm_module():
+def rssm_module(zero_init_z=False):
     from stable_worldmodel.wm.lewm.module import Embedder, Predictor
 
     from insight.models.rssm import RSSMLeWM
@@ -57,6 +57,7 @@ def rssm_module():
     model = RSSMLeWM(
         embed_dim=D,
         min_var=0.1,
+        zero_init_z=zero_init_z,
         encoder=Encoder(),
         predictor=Predictor(
             num_frames=1, depth=1, heads=1, mlp_dim=8, input_dim=D, hidden_dim=D, dim_head=D
@@ -78,20 +79,44 @@ def rssm_module():
     )
 
 
-def test_rssm_posterior_learns_only_from_the_kl_above_the_free_nats():
-    """The posterior is trained by the KL alone because the samples carry no gradient; the floor
-    removes the KL's gradient below it. Taking the KL's minimum instead of its maximum with the floor
-    would train the posterior with no error."""
+def rssm_posterior_grad(free_nats, kl_floor_over="dims_mean"):
     from insight.losses.reconstruction_rssm import reconstruction_rssm
 
-    def posterior_grad(free_nats):
-        torch.manual_seed(0)
-        module = rssm_module()
-        batch = {"pixels": torch.randn(B, 4, 3, 2, 2), "action": torch.randn(B, 4, 2)}
-        output = reconstruction_rssm(module, batch, "fit", free_nats=free_nats)
-        output["loss"].backward()
-        grads = [p.grad for p in module.model.posterior_mu.parameters()]
-        return sum(g.abs().sum() for g in grads if g is not None)
+    torch.manual_seed(0)
+    module = rssm_module()
+    batch = {"pixels": torch.randn(B, 4, 3, 2, 2), "action": torch.randn(B, 4, 2)}
+    output = reconstruction_rssm(
+        module, batch, "fit", free_nats=free_nats, kl_floor_over=kl_floor_over
+    )
+    output["loss"].backward()
+    grads = [p.grad for p in module.model.posterior_mu.parameters()]
+    return torch.cat([g.flatten() for g in grads]), output["kl_loss"]
 
-    assert posterior_grad(free_nats=1e6) == 0
-    assert posterior_grad(free_nats=0.0) > 0
+
+def test_rssm_reconstruction_reaches_the_posterior_heads():
+    """A floor above the KL removes its gradient. With ``.sample()`` the posterior would then get none
+    at all and stay at its initialization."""
+    grad, _ = rssm_posterior_grad(free_nats=1e6)
+    assert grad.abs().sum() > 0
+
+
+def test_rssm_floor_over_dims_sum_leaves_the_floor_below_the_summed_kl():
+    """The KL's own gradient is the change in the heads' gradient when the floor moves from above it to
+    ``free_nats``. A floor between the per-dimension mean and the sum over dimensions must pass the sum's
+    gradient and block the mean's; reading the mean for ``dims_sum`` would keep the heads untrained."""
+    baseline, _ = rssm_posterior_grad(free_nats=1e6)
+    _, kl_mean = rssm_posterior_grad(free_nats=0.0)
+    floor = 2 * kl_mean.item()
+
+    def kl_grad(kl_floor_over):
+        grad, _ = rssm_posterior_grad(free_nats=floor, kl_floor_over=kl_floor_over)
+        return (grad - baseline).abs().sum()
+
+    assert kl_grad("dims_mean") == 0
+    assert kl_grad("dims_sum") > 0
+
+
+def test_rssm_zero_init_z_adds_nothing_to_the_conditioning():
+    """``zero_init_z`` must reach ``z_proj``; otherwise ``z`` enters the predictor as untrained noise."""
+    module = rssm_module(zero_init_z=True)
+    assert module.model.z_proj(torch.randn(B, D)).abs().sum() == 0

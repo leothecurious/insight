@@ -22,12 +22,19 @@ def head(n_in, n_out, layers):
 
 
 class RSSMLeWM(LeWM):
-    """``min_var`` is added to the scale of the prior and posterior while training (rssm.py:262, 268)."""
+    """``min_var`` is added to the scale of the prior and posterior while training (rssm.py:262, 268).
 
-    def __init__(self, *, embed_dim, min_var, **kwargs):
+    ``zero_init_z`` starts ``z_proj`` at zero, so ``z`` enters the conditioning gradually, as the predictor's own
+    AdaLN-zero modulation starts at zero (stable_worldmodel/wm/lewm/module.py:88-89).
+    """
+
+    def __init__(self, *, embed_dim, min_var, zero_init_z=False, **kwargs):
         super().__init__(**kwargs)
         self.min_var = min_var
         self.z_proj = nn.Linear(embed_dim, embed_dim)
+        if zero_init_z:
+            nn.init.zeros_(self.z_proj.weight)
+            nn.init.zeros_(self.z_proj.bias)
         self.prior_mu = head(embed_dim, embed_dim, 1)
         self.prior_scale = head(embed_dim, embed_dim, 1)
         self.posterior_mu = head(2 * embed_dim, embed_dim, 2)
