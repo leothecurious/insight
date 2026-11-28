@@ -1,0 +1,11 @@
+# @package _global_
+# Compared with sobal_threedots/lewm: Sobal et al.'s reconstruction, the pixel error of every frame of a
+# 17-frame window decoded from the open-loop rollout of its first frame (as sobal_dot/reconstruction_clean).
+defaults:
+  - sobal_threedots/base
+  - override /loss: reconstruction
+
+wm:
+  num_preds: 16
+checkpoint:
+  steps: [3906] # half of the 7,812 steps: one 17-frame window per sequence

@@ -107,3 +107,48 @@ def test_first_frame_rollout_joint_position_rmse():
     np.testing.assert_allclose(result["center_control"]["pooled_rmse"], np.sqrt(0.1092), atol=1e-6)
     np.testing.assert_allclose(result["r_pooled"], np.sqrt(0.003 / 0.1092), atol=1e-6)
     np.testing.assert_allclose(result["r"], 0.05 / center_steps.mean(), atol=1e-6)
+
+
+def test_rollout_probe_reads_each_dot_from_its_own_targets():
+    """A dot read through another dot's target columns, or an average over the wrong dots, would score
+    the readable dot as unreadable. The predictions hold the action dot's position exactly and nothing
+    of the fixed dot, whose targets are listed first and out of order. The training windows cross the
+    four coordinates in a full factorial, so the readout's weights from the action features onto the
+    fixed targets are exactly zero and the fixed dot is predicted by its training mean, 0.5."""
+    rng = np.random.default_rng(0)
+    steps = 2
+    grid = np.array(np.meshgrid(*[[0.3, 0.7]] * 4)).reshape(4, -1).T  # 16 training windows
+    test_action = rng.uniform(0.1, 0.9, (6, 2))
+    test_fixed = rng.uniform(0.1, 0.9, (6, 2))
+    action = np.concatenate([grid[:, :2], test_action])
+    fixed = np.concatenate([grid[:, 2:], test_fixed])
+    windows = len(action)
+    action, fixed = (np.repeat(x[:, None], steps, 1) for x in (action, fixed))
+    predicted = np.concatenate([action, np.zeros_like(fixed)], -1)
+    target = np.stack([fixed[..., 0], action[..., 1], fixed[..., 1], action[..., 0]], -1)
+    lat = Latents(
+        z=torch.zeros(windows, steps, 1),
+        action=torch.zeros(windows, steps, 2),
+        valid=torch.ones(windows, steps, dtype=torch.bool),
+        target=torch.tensor(target, dtype=torch.float32),
+        episode=torch.arange(windows),
+        train=torch.arange(windows) < 16,
+        target_names=["fixed_x", "action_y", "fixed_y", "action_x"],
+        target_angle=[False] * 4,
+        target_group=["state"] * 4,
+        predicted_z=torch.tensor(predicted, dtype=torch.float32),
+    )
+    dots = {"action": ["action_x", "action_y"], "stationary": ["fixed_x", "fixed_y"]}
+    result = suite.run(lat, [{"name": "rollout_probe", "targets": dots}])["rollout_probe"]
+
+    centre_fixed = np.sqrt(((test_fixed - 0.5) ** 2).sum(-1).mean())
+    centre_action = np.sqrt(((test_action - 0.5) ** 2).sum(-1).mean())
+    np.testing.assert_allclose(result["action"]["mean_rmse"], 0.0, atol=1e-5)
+    np.testing.assert_allclose(
+        result["action"]["center_control"]["mean_rmse"], centre_action, rtol=1e-5
+    )
+    np.testing.assert_allclose(result["stationary"]["mean_rmse"], centre_fixed, rtol=1e-4)
+    np.testing.assert_allclose(result["stationary"]["r"], 1.0, rtol=1e-4)
+    np.testing.assert_allclose(
+        result["average"]["r"], centre_fixed / (centre_action + centre_fixed), rtol=1e-4
+    )

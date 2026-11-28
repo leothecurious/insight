@@ -1,0 +1,5 @@
+# @package _global_
+# The settings of sobal_dot/base on the 3-dots data.
+defaults:
+  - /experiment/sobal_dot/base
+  - override /data: threedots
