@@ -1,0 +1,13 @@
+# LeWM's loss over every transition of a 17-frame window (insight.losses.lewm.lewm_sequence): from the
+# predictor's own rollout of the first frame when rollout is true, from the observed frames otherwise.
+forward:
+  _target_: insight.losses.lewm.lewm_sequence
+  _partial_: true
+  history_size: ${wm.history_size}
+  num_preds: ${wm.num_preds}
+  sigreg_weight: 0.09
+  rollout: true
+regularizers:
+  sigreg:
+    _target_: stable_worldmodel.wm.loss.SIGReg
+modules: {}

@@ -1,0 +1,5 @@
+# @package _global_
+# Compared with sobal_threedots/reconstruction: the RSSM of sobal_dot/rssm_repaired, on 3-dots frames.
+defaults:
+  - /experiment/sobal_dot/rssm_repaired
+  - override /data: threedots

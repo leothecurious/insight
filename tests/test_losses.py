@@ -120,3 +120,81 @@ def test_rssm_zero_init_z_adds_nothing_to_the_conditioning():
     """``zero_init_z`` must reach ``z_proj``; otherwise ``z`` enters the predictor as untrained noise."""
     module = rssm_module(zero_init_z=True)
     assert module.model.z_proj(torch.randn(B, D)).abs().sum() == 0
+
+
+def sequence_module(first, rest, actions):
+    """A LeWM stand-in whose encoder returns fixed embeddings and whose predictor mixes in the action."""
+    predictor = torch.nn.Linear(D, D)
+    model = SimpleNamespace(
+        encode=lambda info: {**info, "emb": torch.cat([first, rest], 1), "act_emb": info["action"]},
+        predict=lambda emb, act_emb: predictor(emb + act_emb),
+        action_encoder=torch.nn.Identity(),
+    )
+    model.rollout = lambda info, actions, history_size: LeWM.rollout(
+        model, info, actions, history_size
+    )
+    module = SimpleNamespace(
+        model=model, sigreg=SIGReg(knots=5, num_proj=8), log_dict=lambda *a, **k: None
+    )
+    batch = {"pixels": torch.randn(B, T, 3, 2, 2), "action": actions}
+    return module, batch
+
+
+def test_multistep_lewm_trains_through_the_rollout_in_action_order():
+    """The last step's error must reach the first frame's embedding through every earlier prediction, and
+    action k must move only the predictions of frames after k. A rollout that detached the first embedding
+    or fed observed embeddings would train without error, as would one that consumed actions off by one."""
+    from insight.losses.lewm import lewm_sequence
+
+    def predictions(actions, first, rest):
+        module, batch = sequence_module(first, rest, actions)
+        captured = {}
+        rollout = module.model.rollout
+
+        def capture(info, actions, history_size):
+            out = rollout(info, actions, history_size)
+            captured["pred"] = out["predicted_emb"][:, 0, 1:]
+            return out
+
+        module.model.rollout = capture
+        lewm_sequence(
+            module, batch, "fit", history_size=1, num_preds=T - 1, sigreg_weight=0.0, rollout=True
+        )
+        return captured["pred"]
+
+    torch.manual_seed(0)
+    first = torch.randn(B, 1, D, requires_grad=True)
+    rest = torch.randn(B, T - 1, D, requires_grad=True)
+    actions = torch.randn(B, T, D)
+    pred = predictions(actions, first, rest)
+    last_error = (pred[:, -1] - rest[:, -1]).pow(2).sum()
+    grad_first, grad_rest = torch.autograd.grad(last_error, [first, rest])
+    assert grad_first.abs().sum() > 0
+    # Only the target of the last step, not the inputs of earlier steps, comes from the later frames.
+    assert grad_rest[:, :-1].abs().sum() == 0
+
+    k = 2
+    moved = actions.clone()
+    moved[:, k] += 1.0
+    with torch.no_grad():
+        base, perturbed = predictions(actions, first, rest), predictions(moved, first, rest)
+    # Prediction j is of frame j + 1, which action j leads to.
+    assert torch.equal(base[:, :k], perturbed[:, :k])
+    assert not torch.allclose(base[:, k], perturbed[:, k])
+
+
+def test_observed_lewm_predicts_each_frame_from_the_one_before_only():
+    """The observed-frame control must see one frame per prediction; a predictor given the whole window
+    would attend to earlier frames and change the context as well as the horizon."""
+    from insight.losses.lewm import lewm_sequence
+
+    first = torch.randn(B, 1, D)
+    rest = torch.randn(B, T - 1, D)
+    module, batch = sequence_module(first, rest, torch.randn(B, T, D))
+    seen = []
+    predict = module.model.predict
+    module.model.predict = lambda emb, act_emb: seen.append(emb.shape) or predict(emb, act_emb)
+    lewm_sequence(
+        module, batch, "fit", history_size=1, num_preds=T - 1, sigreg_weight=0.0, rollout=False
+    )
+    assert seen == [torch.Size([B * (T - 1), 1, D])]

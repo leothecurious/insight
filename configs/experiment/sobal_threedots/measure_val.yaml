@@ -1,0 +1,8 @@
+# @package _global_
+# sobal_threedots/measure scored on the validation file, for choosing a recipe.
+defaults:
+  - sobal_threedots/measure
+
+data:
+  measure:
+    files: [threedots1m_probe.h5, threedots1m_val.h5]

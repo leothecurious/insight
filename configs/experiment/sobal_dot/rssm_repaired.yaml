@@ -1,0 +1,17 @@
+# @package _global_
+# Compared with reconstruction_rssm_clean: the RSSM with a trained stochastic state (R4a). The KL floor of
+# 3 nats is on the sum over latent dimensions, z enters the predictor through a zero-initialised
+# projection, and Adam runs at 5e-5 with the warmup-cosine schedule.
+defaults:
+  - sobal_dot/rssm_base
+
+optimizer:
+  lr: 5e-5
+schedule: warmup_cosine
+model:
+  min_var: 0.1
+  zero_init_z: true
+loss:
+  forward:
+    free_nats: 3.0
+    kl_floor_over: dims_sum
