@@ -133,12 +133,15 @@ def rollout_probe(lat, max_train=None, max_test=None, seed=0, targets=None):
     y = target[n[te], t[te]]
     prediction = probe.predict(predicted_z[n[te], t[te]].astype(np.float64))
     centre = np.full_like(y, 0.5)
+    # The first frame's true position at every step: what a rollout that never moves the dot scores.
+    copy_first = target[n[te], 0]
     steps = lat.valid.shape[1]
     results = {}
     for i, name in enumerate(dots):
         pair = slice(2 * i, 2 * i + 2)
         model = _rollout_scores(prediction[:, pair], y[:, pair], t[te], steps)
         center = _rollout_scores(centre[:, pair], y[:, pair], t[te], steps)
+        copy = _rollout_scores(copy_first[:, pair], y[:, pair], t[te], steps)
         results[name] = {
             "units": "coordinate side length",
             "n_train": len(tr),
@@ -146,6 +149,7 @@ def rollout_probe(lat, max_train=None, max_test=None, seed=0, targets=None):
             "n_test_per_step": [int((t[te] == step).sum()) for step in range(steps)],
             **model,
             "center_control": center,
+            "copy_first_control": copy,
             "r": model["mean_rmse"] / center["mean_rmse"],
             "r_pooled": model["pooled_rmse"] / center["pooled_rmse"],
         }
@@ -153,9 +157,11 @@ def rollout_probe(lat, max_train=None, max_test=None, seed=0, targets=None):
         return results["dot"]
     mean_rmse = float(np.mean([v["mean_rmse"] for v in results.values()]))
     center_rmse = float(np.mean([v["center_control"]["mean_rmse"] for v in results.values()]))
+    copy_rmse = float(np.mean([v["copy_first_control"]["mean_rmse"] for v in results.values()]))
     results["average"] = {
         "mean_rmse": mean_rmse,
         "center_control": {"mean_rmse": center_rmse},
+        "copy_first_control": {"mean_rmse": copy_rmse},
         "r": mean_rmse / center_rmse,
     }
     return results
