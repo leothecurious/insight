@@ -3,7 +3,7 @@
 # window from its first frame, as reconstruction_clean unrolls it, so the gradient runs back through the
 # rollout to the encoder. Noise is added with +nuisance=noise_episode|noise_frame.
 defaults:
-  - sobal_dot/base
+  - /experiment/sobal_dot/base
   - override /loss: lewm_sequence
 
 wm:

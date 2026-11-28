@@ -3,7 +3,7 @@
 # 3 nats is on the sum over latent dimensions, z enters the predictor through a zero-initialised
 # projection, and Adam runs at 5e-5 with the warmup-cosine schedule.
 defaults:
-  - sobal_dot/rssm_base
+  - /experiment/sobal_dot/rssm_base
 
 optimizer:
   lr: 5e-5
