@@ -124,7 +124,11 @@ def test_rssm_zero_init_z_adds_nothing_to_the_conditioning():
 
 def sequence_module(first, rest, actions):
     """A LeWM stand-in whose encoder returns fixed embeddings and whose predictor mixes in the action."""
+    # The same predictor weights on every call, so two calls differ only by their inputs.
     predictor = torch.nn.Linear(D, D)
+    with torch.no_grad():
+        predictor.weight.copy_(torch.eye(D) * 0.9)
+        predictor.bias.zero_()
     model = SimpleNamespace(
         encode=lambda info: {**info, "emb": torch.cat([first, rest], 1), "act_emb": info["action"]},
         predict=lambda emb, act_emb: predictor(emb + act_emb),
