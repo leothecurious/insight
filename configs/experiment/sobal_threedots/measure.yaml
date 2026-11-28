@@ -2,7 +2,7 @@
 # sobal_dot/measure with the rollout probe read per dot: each dot's r is its mean RMSE over that of a
 # predictor that always says the centre, from one readout fitted on all six coordinates.
 defaults:
-  - sobal_dot/measure
+  - /experiment/sobal_dot/measure
 
 metrics:
   - name: rollout_probe

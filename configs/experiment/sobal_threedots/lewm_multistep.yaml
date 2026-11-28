@@ -1,7 +1,7 @@
 # @package _global_
 # Compared with sobal_threedots/lewm: the loss of sobal_dot/lewm_multistep, on 3-dots frames.
 defaults:
-  - sobal_threedots/base
+  - /experiment/sobal_threedots/base
   - override /loss: lewm_sequence
 
 wm:
