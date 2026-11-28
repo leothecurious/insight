@@ -1,0 +1,9 @@
+# @package _global_
+# measure with the readout scored on the validation file, for choosing a recipe; the test file stays
+# held out for the selected runs.
+defaults:
+  - /experiment/sobal_dot/measure
+
+data:
+  measure:
+    files: [dot1m_probe.h5, dot1m_val.h5]

@@ -1,0 +1,12 @@
+# @package _global_
+# Compared with lewm_clean: LeWM's loss on every step of the predictor's open-loop rollout of a 17-frame
+# window from its first frame, as reconstruction_clean unrolls it, so the gradient runs back through the
+# rollout to the encoder. Noise is added with +nuisance=noise_episode|noise_frame.
+defaults:
+  - /experiment/sobal_dot/base
+  - override /loss: lewm_sequence
+
+wm:
+  num_preds: 16
+checkpoint:
+  steps: [3906] # half of the 7,812 steps: one 17-frame window per sequence

@@ -1,0 +1,10 @@
+# @package _global_
+# Compared with sobal_threedots/lewm: the loss of sobal_dot/lewm_multistep, on 3-dots frames.
+defaults:
+  - /experiment/sobal_threedots/base
+  - override /loss: lewm_sequence
+
+wm:
+  num_preds: 16
+checkpoint:
+  steps: [3906] # half of the 7,812 steps: one 17-frame window per sequence

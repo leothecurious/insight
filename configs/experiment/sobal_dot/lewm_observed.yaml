@@ -1,0 +1,9 @@
+# @package _global_
+# Compared with lewm_multistep: each prediction is made from the observed embedding of the frame before it,
+# which is lewm_clean's one-step loss on the same windows and optimizer steps.
+defaults:
+  - /experiment/sobal_dot/lewm_multistep
+
+loss:
+  forward:
+    rollout: false
